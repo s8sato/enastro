@@ -107,7 +107,11 @@ async function main() {
   world.addChild(highlightEdgesLayer);
 
   // One energy particle per edge, animated from source -> target (the
-  // wikilink/embed direction) and looping.
+  // wikilink/embed direction). All particles share a single global clock
+  // (rather than each looping independently on its own, previously
+  // randomized, phase) so every edge fires its particle in sync — the
+  // whole graph "pulses" together instead of looking like scattered,
+  // independent traffic.
   const particleLayer = new PIXI.Container();
   world.addChild(particleLayer);
   const particles = validEdges.map(({ source, target }) => {
@@ -115,15 +119,16 @@ async function main() {
     dot.x = source.x;
     dot.y = source.y;
     particleLayer.addChild(dot);
-    return { dot, source, target, t: Math.random() };
+    return { dot, source, target };
   });
 
+  let particleCycleT = 0;
   app.ticker.add((ticker) => {
     const dt = ticker.deltaMS / 1000;
+    particleCycleT = (particleCycleT + dt * PARTICLE_SPEED) % 1;
     for (const particle of particles) {
-      particle.t = (particle.t + dt * PARTICLE_SPEED) % 1;
-      particle.dot.x = particle.source.x + (particle.target.x - particle.source.x) * particle.t;
-      particle.dot.y = particle.source.y + (particle.target.y - particle.source.y) * particle.t;
+      particle.dot.x = particle.source.x + (particle.target.x - particle.source.x) * particleCycleT;
+      particle.dot.y = particle.source.y + (particle.target.y - particle.source.y) * particleCycleT;
     }
   });
 
