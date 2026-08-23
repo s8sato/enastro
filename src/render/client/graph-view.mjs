@@ -265,9 +265,12 @@ async function main() {
   // a chance to be read (and the finger itself covers the node while
   // pressed). So on touch/pen, the *first* tap on a node only previews it
   // (same highlight as desktop hover) without navigating; a second tap on
-  // the already-previewed node navigates. Tapping elsewhere clears the
-  // preview. Mouse pointerover/pointerout (real hover) and click-to-navigate
-  // are unaffected.
+  // the already-previewed node navigates. Tapping a different node swaps
+  // the preview to that node. The preview is intentionally NOT cleared by
+  // tapping empty space or by panning/zooming, since on mobile there's no
+  // other way to keep a node's title visible while inspecting the graph.
+  // Mouse pointerover/pointerout (real hover) and click-to-navigate are
+  // unaffected.
   let armedTouchNodeId = null;
 
   for (const node of graph.nodes) {
@@ -298,17 +301,6 @@ async function main() {
       highlightNode(node);
     });
   }
-
-  // Tapping empty space (not a node) on touch clears whichever node was
-  // previewed/armed above.
-  app.stage.eventMode = "static";
-  app.stage.hitArea = app.screen;
-  app.stage.on("pointertap", (event) => {
-    if (event.target !== app.stage || !armedTouchNodeId) return;
-    const previousNode = nodeById.get(armedTouchNodeId);
-    if (previousNode) clearHighlight(previousNode);
-    armedTouchNodeId = null;
-  });
 
   /** Maps a screen-space point (canvas-relative) to a point in `world` space. */
   function screenToWorld(point) {
