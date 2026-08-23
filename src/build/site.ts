@@ -15,7 +15,7 @@ import { buildSearchIndexEntry, type SearchIndexEntry } from "./search-index.js"
 // works whether this runs directly from src/ (tests, via vitest) or from
 // dist-ts/ (CLI, after `npm run build` + scripts/copy-client-assets.mjs).
 const CLIENT_ASSETS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "../render/client");
-const CLIENT_ASSET_FILENAMES = ["filter.mjs", "search.mjs"];
+const CLIENT_ASSET_FILENAMES = ["filter.mjs", "search.mjs", "copy-id.mjs"];
 
 export interface BuildSiteResult {
   /** Human-readable warnings (e.g. edges dropped because the target was
@@ -30,8 +30,9 @@ export interface BuildSiteResult {
  * artifact (spec/04-architecture.md, spec/05-artifact-contracts.md).
  */
 export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
-  const graph = buildGraph(vaultDir);
-  const { projection, warnings } = buildPublicProjection(graph);
+  const { graph, warnings: titleWarnings } = buildGraph(vaultDir);
+  const { projection, warnings: projectionWarnings } = buildPublicProjection(graph);
+  const warnings = [...titleWarnings, ...projectionWarnings];
 
   const config = loadVaultConfig(vaultDir);
   const attachments = discoverAttachments(vaultDir);

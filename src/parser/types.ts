@@ -10,8 +10,13 @@ export interface Frontmatter {
   publish: boolean;
   tags: string[];
   aliases: string[];
-  title?: string;
-  /** The full parsed frontmatter object, including unrecognized keys. */
+  /**
+   * The full parsed frontmatter object, including unrecognized keys. Note:
+   * a `title` key here is intentionally NOT surfaced as a typed field — it
+   * is invalidated (ADR-0009): the page title is always derived from the
+   * note's own first H1 heading (or its id), never from frontmatter. `raw`
+   * still carries it so callers can detect and warn about its presence.
+   */
   raw: Record<string, unknown>;
 }
 

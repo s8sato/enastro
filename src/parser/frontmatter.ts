@@ -34,7 +34,6 @@ export function parseFrontmatter(raw: string): FrontmatterParseResult {
       publish: parsed.publish === true,
       tags: toStringArray(parsed.tags),
       aliases: toStringArray(parsed.aliases),
-      title: typeof parsed.title === "string" ? parsed.title : undefined,
       raw: parsed,
     },
     body,

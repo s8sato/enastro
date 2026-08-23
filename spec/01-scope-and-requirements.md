@@ -77,9 +77,10 @@ minimal Markdown vault
 | REQ-CONTENT-003 | パーサーは `#tag` 構文を解釈 **MUST**。 | DECIDED |
 | REQ-CONTENT-004 | パーサーは YAML frontmatter（少なくとも `publish` とタグ相当のフィールド）を解釈 **MUST**。 | DECIDED |
 | REQ-CONTENT-005 | 最小セット外の Obsidian 構文（callout・見出しリンク・block 参照・dataview・canvas 等）は、エラーにせずプレーンテキストとして素通しする **MUST**。 | DECIDED |
-| REQ-CONTENT-006 | alias と同名ノートが衝突する場合、タイトル一致を alias 一致より優先して解決する **MUST**（候補A、02-content-semantics.md §2.2 参照）。 | DECIDED |
+| REQ-CONTENT-006 | alias と同名ノートが衝突する場合、ID 一致を alias 一致より優先して解決する **MUST**（[ADR-0009](../decisions/ADR-0009-note-id-title-separation.md)、02-content-semantics.md §2.2 参照）。 | DECIDED |
 | REQ-CONTENT-007 | 存在しないノートへの link（broken link）は build を失敗させず処理される **MUST**。表示方法はプレーンテキスト化し、`span.broken-link` を付与する（02-content-semantics.md §2.3 参照）。 | DECIDED |
 | REQ-CONTENT-008 | 日本語ファイル名・Unicode を含むノート名を正しく解決 **MUST**。 | DECIDED |
+| REQ-CONTENT-009 | ノートの ID はファイル名（拡張子を除いたもの、NFC 正規化）とし、vault 内で一意でなければならない **MUST**。ID の衝突は build を失敗させる **MUST**。ノートのタイトルは本文中の最初の第一レベル見出しとし、存在しない場合は ID をタイトルとして使う **MUST**。frontmatter の `title` は無視され、警告として記録される（build error にはしない）**MUST**（[ADR-0009](../decisions/ADR-0009-note-id-title-separation.md)、02-content-semantics.md §2.1, §2.4 参照）。 | DECIDED |
 
 ### 4.3 GRAPH
 

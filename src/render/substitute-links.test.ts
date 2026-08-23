@@ -13,9 +13,9 @@ describe("substituteLinks", () => {
       { id: "b", title: "B", aliases: [], tags: [], publish: true, path: "/b.md", body: "" },
     ]);
 
-    const { text, removedTargets } = substituteLinks("See [[B]] for details.", g);
+    const { text, removedTargets } = substituteLinks("See [[b]] for details.", g);
 
-    expect(text).toBe("See [B](b.html) for details.");
+    expect(text).toBe("See [b](b.html) for details.");
     expect(removedTargets).toEqual([]);
   });
 
@@ -25,7 +25,7 @@ describe("substituteLinks", () => {
       { id: "b", title: "B", aliases: [], tags: [], publish: true, path: "/b.md", body: "" },
     ]);
 
-    const { text } = substituteLinks("See [[B|custom label]].", g);
+    const { text } = substituteLinks("See [[b|custom label]].", g);
 
     expect(text).toBe("See [custom label](b.html).");
   });
@@ -45,15 +45,14 @@ describe("substituteLinks", () => {
     ]);
 
     const { text, removedTargets } = substituteLinks(
-      "See [[Secret Project Codename|the secret plan]] and ![[confidential-alias]].",
+      "See [[secret|the secret plan]] and ![[confidential-alias]].",
       g,
     );
 
     expect(text).toBe("See  and .");
-    expect(text).not.toContain("Secret Project Codename");
     expect(text).not.toContain("secret plan");
     expect(text).not.toContain("confidential-alias");
-    expect(removedTargets).toEqual(["Secret Project Codename", "confidential-alias"]);
+    expect(removedTargets).toEqual(["secret", "confidential-alias"]);
   });
 
   it("renders unresolved/ambiguous links as plain text inside a .broken-link span", () => {
@@ -70,9 +69,9 @@ describe("substituteLinks", () => {
       { id: "b", title: "B", aliases: [], tags: [], publish: true, path: "/b.md", body: "" },
     ]);
 
-    const { text } = substituteLinks("Inline `[[B]]` and:\n```\n[[B]]\n```", g);
+    const { text } = substituteLinks("Inline `[[b]]` and:\n```\n[[b]]\n```", g);
 
-    expect(text).toBe("Inline `[[B]]` and:\n```\n[[B]]\n```");
+    expect(text).toBe("Inline `[[b]]` and:\n```\n[[b]]\n```");
   });
 
   it("rewrites an embed of an allowlisted attachment into a Markdown image pointing at ../attachments/<id>", () => {

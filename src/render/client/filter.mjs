@@ -22,6 +22,7 @@ export function filterEntries(entries, query, selectedTags) {
     .filter((entry) => {
       const matchesQuery =
         normalizedQuery === "" ||
+        entry.id.toLowerCase().includes(normalizedQuery) ||
         entry.title.toLowerCase().includes(normalizedQuery) ||
         entry.text.toLowerCase().includes(normalizedQuery);
       const matchesTags = selectedTags.every((tag) => entry.tags.includes(tag));

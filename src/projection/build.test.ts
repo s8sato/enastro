@@ -15,7 +15,7 @@ const PRIVACY_VAULT_DIR = path.join(
 
 describe("buildPublicProjection against fixtures/privacy-vault", () => {
   it("excludes the private note from the public node list", () => {
-    const graph = buildGraph(PRIVACY_VAULT_DIR);
+    const { graph } = buildGraph(PRIVACY_VAULT_DIR);
     const { projection } = buildPublicProjection(graph);
 
     const ids = projection.nodes.map((node) => node.id);
@@ -24,7 +24,7 @@ describe("buildPublicProjection against fixtures/privacy-vault", () => {
   });
 
   it("removes both the wikilink and embed edges from public-note to private-note", () => {
-    const graph = buildGraph(PRIVACY_VAULT_DIR);
+    const { graph } = buildGraph(PRIVACY_VAULT_DIR);
     const { projection } = buildPublicProjection(graph);
 
     const edgesToPrivateNote = projection.edges.filter((edge) => edge.target === "private-note");
@@ -32,7 +32,7 @@ describe("buildPublicProjection against fixtures/privacy-vault", () => {
   });
 
   it("never exposes the private note's id, title, tags, or alias anywhere in the projection (privacy scan)", () => {
-    const graph = buildGraph(PRIVACY_VAULT_DIR);
+    const { graph } = buildGraph(PRIVACY_VAULT_DIR);
     const { projection } = buildPublicProjection(graph);
     const serialized = JSON.stringify(projection);
 
@@ -43,7 +43,7 @@ describe("buildPublicProjection against fixtures/privacy-vault", () => {
   });
 
   it("preserves a normal public-to-public edge and its backlink", () => {
-    const graph = buildGraph(PRIVACY_VAULT_DIR);
+    const { graph } = buildGraph(PRIVACY_VAULT_DIR);
     const { projection } = buildPublicProjection(graph);
 
     expect(projection.edges).toContainEqual({
@@ -60,7 +60,7 @@ describe("buildPublicProjection against fixtures/privacy-vault", () => {
   });
 
   it("records private-log-only warnings for each removed edge (REQ-PUB-004)", () => {
-    const graph = buildGraph(PRIVACY_VAULT_DIR);
+    const { graph } = buildGraph(PRIVACY_VAULT_DIR);
     const { warnings } = buildPublicProjection(graph);
 
     expect(warnings).toHaveLength(2);

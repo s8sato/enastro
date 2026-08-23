@@ -10,7 +10,7 @@
 
 - `note-a.md`: `publish: true`。`note-b.md` へ `[[note-b]]` と `[[note-b|表示名]]` の両方でリンクする、少なくとも1つの `#tag` を持つ。
 - `note-b.md`: `publish: true`。`note-a.md` からの backlink が生成されることを検証する対象。
-- `note-c-alias.md`: `publish: true`。`aliases: [note-b]` のように、別ノートのタイトルと衝突する alias を持つ（REQ-CONTENT-006 の挙動確認用）。
+- `note-c-alias.md`: `publish: true`。`aliases: [note-b]` のように、別ノートの ID と衝突する alias を持つ（REQ-CONTENT-006 の挙動確認用）。
 - `note-d-broken-link.md`: `publish: true`。存在しないノートへの `[[does-not-exist]]` を含む。
 
 この vault には添付ファイルが存在しないため `enastro.config.json`（`publishAttachments` allowlist、
@@ -28,9 +28,10 @@ fixtures/privacy-vault 参照）は不要であり、作成していない。
 これらは `src/parser/index.test.ts`（frontmatter/wikilink/embed/tag 抽出）と
 `src/graph/build.test.ts`（node/edge/backlink 構築）の unit test から参照される。
 
-alias とタイトルの衝突（`note-c-alias.md` の `aliases: [note-b]` と `note-b.md` の
-タイトルの衝突、REQ-CONTENT-006）は **候補A（タイトル一致を alias 一致より優先）**
-で DECIDED 済み（[spec/02-content-semantics.md](../../spec/02-content-semantics.md) §2.2）。
+alias と ID の衝突（`note-c-alias.md` の `aliases: [note-b]` と `note-b.md` の
+ID の衝突、REQ-CONTENT-006）は **ID 一致を alias 一致より優先する**
+（[ADR-0009](../../decisions/ADR-0009-note-id-title-separation.md)）で DECIDED 済み
+（[spec/02-content-semantics.md](../../spec/02-content-semantics.md) §2.2）。
 `src/graph/resolve.ts` の `resolveTarget` がこの規則で `[[note-b]]` を常に
 `note-b.md` に解決することを `src/graph/build.test.ts` で検証している。
 

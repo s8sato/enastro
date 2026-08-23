@@ -18,7 +18,7 @@ dist/
 └── graph.json            # 最小 graph IR（public projection の nodes/edges）
 ```
 
-- ファイル名・URL に非公開情報（元のファイルパス等）を使わない。`<note-id>` は公開用に生成される安定 ID（例: スラッグ）とする。
+- ファイル名・URL に非公開情報（元のディレクトリ構成等）を使わない。`<note-id>` はファイル名（拡張子を除いたもの、NFC 正規化）であり、vault 内で一意である必要がある（REQ-CONTENT-009、[ADR-0009](../decisions/ADR-0009-note-id-title-separation.md)）。
 - 上記構成は v0.1 実装開始時に確定させる（現時点では PROPOSED）。
 
 ## 3. graph.json の最小 schema [PROPOSED]

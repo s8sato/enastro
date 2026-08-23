@@ -44,6 +44,13 @@ describe("buildSite (fixtures/basic-vault)", () => {
     // prose, to avoid a false-positive match against the (correct)
     // same-looking href in the unrelated <section class="backlinks"> below.
     expect(noteA).toContain('This note links to <a href="note-b.html">note-b</a>');
+    // The note's own first H1 (from its body) is the only <h1>; the page no
+    // longer injects a separate title heading (ADR-0009). The note id is
+    // instead shown as a small, always-visible, click-to-copy string.
+    expect(noteA).toContain("<article><h1>Note A</h1>");
+    expect(noteA).toContain('<p class="note-id"><code>note-a</code>');
+    expect(noteA).toContain('data-copy="note-a"');
+    expect(noteA).toContain('<script type="module" src="../assets/copy-id.mjs"></script>');
 
     const noteB = readFileSync(path.join(outDir, "notes", "note-b.html"), "utf-8");
     // note-a links to note-b twice, so note-a should appear as a backlink.

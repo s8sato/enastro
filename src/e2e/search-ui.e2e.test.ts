@@ -80,7 +80,7 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
     await page.click('.backlinks a[href="note-a.html"]');
 
     await expect.poll(() => page.url()).toContain("/notes/note-a.html");
-    await expect.poll(() => page.locator("body > h1").textContent()).toBe("note-a");
+    await expect.poll(() => page.locator("article h1").textContent()).toBe("Note A");
   });
 
   it("navigates from an inline wikilink in the note body to the linked note (REQ-CONTENT-001)", async () => {
@@ -89,6 +89,6 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
     await page.click('article a:has-text("note-b")');
 
     await expect.poll(() => page.url()).toContain("/notes/note-b.html");
-    await expect.poll(() => page.locator("body > h1").textContent()).toBe("note-b");
+    await expect.poll(() => page.locator("article h1").textContent()).toBe("Note B");
   });
 });

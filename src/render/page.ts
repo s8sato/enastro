@@ -28,10 +28,11 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <title>${escapeHtml(node.title)}</title>
 </head>
 <body>
-<h1>${escapeHtml(node.title)}</h1>
+<p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button></p>
 ${tagsHtml}
 <article>${bodyHtml}</article>
 ${backlinksHtml}
+<script type="module" src="../assets/copy-id.mjs"></script>
 </body>
 </html>
 `;

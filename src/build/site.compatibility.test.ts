@@ -72,6 +72,11 @@ describe("buildSite (fixtures/compatibility-vault, REQ-CONTENT-005/008)", () => 
     // no special interpretation.
     expect(html).toContain("LIST FROM #tag");
     expect(html).toContain('{"nodes": [], "edges": []}');
-    expect(html).not.toMatch(/<script[\s>]/i);
+    // Scoped to the rendered <article> (sanitized user content): the page
+    // shell itself legitimately contains a static, enastro-authored
+    // <script type="module"> for the id click-to-copy widget (ADR-0009).
+    const articleMatch = html.match(/<article>[\s\S]*?<\/article>/);
+    expect(articleMatch).not.toBeNull();
+    expect(articleMatch![0]).not.toMatch(/<script[\s>]/i);
   });
 });
