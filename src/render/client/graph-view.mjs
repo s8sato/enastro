@@ -225,36 +225,85 @@ async function main() {
     if (labelByNodeId.size > 0) repositionLabels();
   });
 
+  const neighborIdsByNodeId = new Map(
+    graph.nodes.map((node) => [
+      node.id,
+      [...(neighborsById.get(node.id) ?? [])]
+        .sort((a, b) => (degreeById.get(b) ?? 0) - (degreeById.get(a) ?? 0))
+        .slice(0, MAX_NEIGHBOR_LABELS),
+    ]),
+  );
+
+  function highlightNode(node) {
+    showLabel(node, { primary: true });
+    highlightEdgesLayer.clear();
+    for (const neighborId of neighborIdsByNodeId.get(node.id) ?? []) {
+      const neighborStar = starById.get(neighborId);
+      const neighborNode = nodeById.get(neighborId);
+      if (!neighborStar || !neighborNode) continue;
+      showLabel(neighborNode, { primary: false, awayFrom: node });
+      highlightEdgesLayer.moveTo(node.x, node.y).lineTo(neighborStar.x, neighborStar.y);
+    }
+    highlightEdgesLayer.stroke({ width: 3, color: EDGE_COLOR, alpha: 0.9 });
+  }
+
+  function clearHighlight(node) {
+    hideLabel(node.id);
+    for (const neighborId of neighborIdsByNodeId.get(node.id) ?? []) {
+      hideLabel(neighborId);
+    }
+    highlightEdgesLayer.clear();
+  }
+
+  // On touch devices there's no real "hover": a tap fires pointerover then
+  // immediately pointertap-and-navigate on release, so the title never has
+  // a chance to be read (and the finger itself covers the node while
+  // pressed). So on touch/pen, the *first* tap on a node only previews it
+  // (same highlight as desktop hover) without navigating; a second tap on
+  // the already-previewed node navigates. Tapping elsewhere clears the
+  // preview. Mouse pointerover/pointerout (real hover) and click-to-navigate
+  // are unaffected.
+  let armedTouchNodeId = null;
+
   for (const node of graph.nodes) {
     const star = starById.get(node.id);
-    const neighborIds = [...(neighborsById.get(node.id) ?? [])]
-      .sort((a, b) => (degreeById.get(b) ?? 0) - (degreeById.get(a) ?? 0))
-      .slice(0, MAX_NEIGHBOR_LABELS);
 
-    star.on("pointerover", () => {
-      showLabel(node, { primary: true });
-
-      highlightEdgesLayer.clear();
-      for (const neighborId of neighborIds) {
-        const neighborStar = starById.get(neighborId);
-        const neighborNode = nodeById.get(neighborId);
-        if (!neighborStar || !neighborNode) continue;
-        showLabel(neighborNode, { primary: false, awayFrom: node });
-        highlightEdgesLayer.moveTo(node.x, node.y).lineTo(neighborStar.x, neighborStar.y);
-      }
-      highlightEdgesLayer.stroke({ width: 3, color: EDGE_COLOR, alpha: 0.9 });
+    star.on("pointerover", (event) => {
+      if (event.pointerType === "touch" || event.pointerType === "pen") return;
+      highlightNode(node);
     });
-    star.on("pointerout", () => {
-      hideLabel(node.id);
-      for (const neighborId of neighborIds) {
-        hideLabel(neighborId);
-      }
-      highlightEdgesLayer.clear();
+    star.on("pointerout", (event) => {
+      if (event.pointerType === "touch" || event.pointerType === "pen") return;
+      clearHighlight(node);
     });
-    star.on("pointertap", () => {
-      window.location.href = `notes/${encodeURIComponent(node.id)}.html`;
+    star.on("pointertap", (event) => {
+      if (event.pointerType !== "touch" && event.pointerType !== "pen") {
+        window.location.href = `notes/${encodeURIComponent(node.id)}.html`;
+        return;
+      }
+      if (armedTouchNodeId === node.id) {
+        window.location.href = `notes/${encodeURIComponent(node.id)}.html`;
+        return;
+      }
+      if (armedTouchNodeId) {
+        const previousNode = nodeById.get(armedTouchNodeId);
+        if (previousNode) clearHighlight(previousNode);
+      }
+      armedTouchNodeId = node.id;
+      highlightNode(node);
     });
   }
+
+  // Tapping empty space (not a node) on touch clears whichever node was
+  // previewed/armed above.
+  app.stage.eventMode = "static";
+  app.stage.hitArea = app.screen;
+  app.stage.on("pointertap", (event) => {
+    if (event.target !== app.stage || !armedTouchNodeId) return;
+    const previousNode = nodeById.get(armedTouchNodeId);
+    if (previousNode) clearHighlight(previousNode);
+    armedTouchNodeId = null;
+  });
 
   /** Maps a screen-space point (canvas-relative) to a point in `world` space. */
   function screenToWorld(point) {
