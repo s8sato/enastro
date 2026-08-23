@@ -74,10 +74,23 @@ GitHub Pages のような無料の静的ホスティングにそのまま置く�
 5. 問題なければ、`dist/` フォルダの中身をそのまま GitHub Pages 等の静的ホスティングにアップロード
    すれば公開完了です。
 
+   > **注意**: `dist/` フォルダ（enastro が生成した静的サイト）は公開して問題ありませんが、
+   > **vault リポジトリ本体（Markdown の生データ）を public にしてはいけません**。vault には
+   > `publish: false` の下書き・日記なども含まれており、リポジトリ自体を public にすると
+   > それらの生ファイルがそのまま世界に公開されてしまいます。privacy invariant が守るのは
+   > enastro が生成した `dist/` の中身だけで、vault リポジトリの可視性は別問題です。
+
 ## GitHub Pages への自動公開（エンドユーザー向けテンプレート）
 
 自分の vault を、毎回手作業でアップロードするのではなく、GitHub Actions で自動的に
-GitHub Pages へ公開したい場合は、次のような workflow を自分のリポジトリの
+GitHub Pages へ公開したい場合の手順です。**vault リポジトリを private のまま保てるかどうかで
+手順が変わる**ことに注意してください（GitHub Pages は Free プランでは public リポジトリでしか
+有効化できません。private リポジトリで Pages を使うには GitHub Pro/Team/Enterprise が必要です）。
+
+### パターン A: vault リポジトリを public にできる場合（最も簡単）
+
+公開しても構わない vault（そもそも非公開ノートを含まない、または GitHub Pro 等で private
+リポジトリでも Pages が使える）であれば、次の workflow を vault リポジトリの
 `.github/workflows/deploy.yml` としてコピー&ペーストしてください
 （[ADR-0013](decisions/ADR-0013-ci-github-pages-pipeline-scope.md)）。
 
@@ -127,9 +140,62 @@ jobs:
 「Settings → Pages → Source: GitHub Actions」を一度だけ有効にすれば、`main` ブランチへの
 push のたびに自動でサイトが更新されます。
 
-このテンプレートは enastro が代わりに公開してくれるものではなく、**あなた自身のリポジトリ**で
-動く独立した workflow です。private リポジトリから public リポジトリへの自動ミラーリングは
-現時点では未対応です（引き続き検討中）。
+### パターン B: vault リポジトリを private のままにしたい場合（推奨・多くの人はこちら）
+
+非公開ノートを含む vault は、通常 private リポジトリで管理したいはずです。この場合、
+**vault リポジトリ自体には Pages を設定せず**、次の 2 リポジトリ構成にします。
+
+- `my-notes`（private）: vault の生データを置く、今まで通りのリポジトリ。
+- `my-notes-site`（public）: enastro が生成した `dist/` の中身だけを置く、公開用の別リポジトリ。
+  Settings → Pages → Source を `Deploy from a branch`（例: `main` ブランチ）にしておく。
+
+`my-notes` 側に、ビルドした `dist/` を `my-notes-site` へ push するだけの workflow を追加します
+（GitHub Pages 用の公式 action ではなく、素の `git push` を使うだけなのでサードパーティ action には
+依存しません）。`my-notes-site` への書き込み権限を持つ [Personal Access Token](https://github.com/settings/tokens)
+（`my-notes-site` に対する `contents: write` 権限に絞った fine-grained token を推奨）を発行し、
+`my-notes` リポジトリの Settings → Secrets and variables → Actions に `SITE_REPO_TOKEN` として
+登録してください。
+
+```yaml
+name: Build and push my vault to the public site repo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx enastro ./my-vault ./dist
+      - uses: actions/checkout@v4
+        with:
+          repository: <your-github-user>/my-notes-site
+          token: ${{ secrets.SITE_REPO_TOKEN }}
+          path: site-repo
+      - run: |
+          rsync -a --delete --exclude .git dist/ site-repo/
+          cd site-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "Update published site"
+          git push
+```
+
+この手順は、private vault のまま安全に運用できる代わりに、2 つのリポジトリと 1 つの
+Personal Access Token の管理が必要になります。この private → public の橋渡しをより自動化された
+仕組みとして enastro 自身が提供することは、privacy invariant に関わる設計検討が必要なため
+現時点では見送っています（REQ-PUB-008, [ADR-0013](decisions/ADR-0013-ci-github-pages-pipeline-scope.md)）。
+上記はあくまで一例であり、enastro が動作を保証・テストしているものではありません。
+
+いずれのパターンでも、このテンプレートは enastro が代わりに公開してくれるものではなく、
+**あなた自身のリポジトリ**で動く独立した workflow です。
 
 ## v0.1 / v0.2 でできること
 
