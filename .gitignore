@@ -2,3 +2,4 @@ node_modules/
 dist/
 dist-ts/
 *.log
+/fixtures/benchmark-vault/vault/
