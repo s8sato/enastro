@@ -15,6 +15,15 @@ export interface GraphNode {
   path: string;
   /** The document body (frontmatter removed), used by the render stage. */
   body: string;
+  /**
+   * Last-modified time (epoch ms, from `fs.Stat.mtime`), threaded from
+   * `VaultFile.modifiedAt`. Deliberately not carried into `PublicNode`/
+   * `graph.json` (whose schema is a closed whitelist, see
+   * `validate-graph-schema.ts`) — it is only used to render/search a note's
+   * last-modified timestamp (REQ-UX-007), not as part of the public graph
+   * artifact contract.
+   */
+  modifiedAt: number;
 }
 
 /** A directed edge (REQ-GRAPH-002) produced from a wikilink or embed. */

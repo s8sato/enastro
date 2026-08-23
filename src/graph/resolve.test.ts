@@ -11,6 +11,7 @@ function node(overrides: Partial<GraphNode>): GraphNode {
     publish: overrides.publish ?? true,
     path: overrides.path ?? "/path",
     body: overrides.body ?? "",
+    modifiedAt: overrides.modifiedAt ?? 0,
   };
 }
 

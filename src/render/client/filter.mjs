@@ -9,7 +9,7 @@
  */
 
 /**
- * @param {{id: string, title: string, tags: string[], text: string}[]} entries
+ * @param {{id: string, title: string, tags: string[], text: string, modifiedAt: string}[]} entries
  * @param {string} query
  * @param {string[]} selectedTags
  * @returns {string[]} ids of entries that match both the query and the
@@ -26,7 +26,9 @@ export function filterEntries(entries, query, selectedTags) {
 
   return entries
     .filter((entry) => {
-      const haystack = [entry.id, entry.title, ...entry.tags, entry.text].join(" ").toLowerCase();
+      const haystack = [entry.id, entry.title, ...entry.tags, entry.text, entry.modifiedAt]
+        .join(" ")
+        .toLowerCase();
       const matchesQuery = queryTerms.every((term) => haystack.includes(term));
       const matchesTags = selectedTags.every((tag) => entry.tags.includes(tag));
       return matchesQuery && matchesTags;

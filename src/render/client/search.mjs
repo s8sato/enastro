@@ -55,6 +55,20 @@ async function main() {
   }
 
   searchBox.addEventListener("input", update);
+
+  // Deep-link support (REQ-UX-008): a note page's `#tag` links to
+  // `../index.html?tags=<tag>` so that clicking it lands here with the
+  // corresponding tag checkbox already selected. Unknown tag values (e.g. a
+  // stale/mistyped link) are silently ignored rather than treated as an
+  // error, since there is no checkbox to check for them.
+  const requestedTags = new URLSearchParams(location.search).getAll("tags");
+  for (const tag of requestedTags) {
+    const checkbox = tagFilters.querySelector(`input[value="${CSS.escape(tag)}"]`);
+    if (checkbox) {
+      checkbox.checked = true;
+    }
+  }
+  update();
 }
 
 main();

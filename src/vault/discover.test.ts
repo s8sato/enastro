@@ -20,7 +20,9 @@ describe("discoverVault", () => {
 
     const files = discoverVault(vaultDir);
 
-    expect(files).toEqual([{ id: "note-a", filePath: expect.any(String), raw: "# Note A" }]);
+    expect(files).toEqual([
+      { id: "note-a", filePath: expect.any(String), raw: "# Note A", modifiedAt: expect.any(Number) },
+    ]);
   });
 
   it("throws a single error listing every colliding id group when two or more files share a basename", () => {

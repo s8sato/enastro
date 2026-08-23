@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { KnowledgeGraph } from "../graph/types.js";
 import { substituteLinks } from "./substitute-links.js";
 
-function graph(nodes: KnowledgeGraph["nodes"]): KnowledgeGraph {
-  return { nodes, edges: [] };
+// `modifiedAt` is irrelevant to link substitution, so test node literals
+// omit it and this helper fills in a default.
+function graph(nodes: Array<Omit<KnowledgeGraph["nodes"][number], "modifiedAt">>): KnowledgeGraph {
+  return { nodes: nodes.map((node) => ({ ...node, modifiedAt: 0 })), edges: [] };
 }
 
 describe("substituteLinks", () => {

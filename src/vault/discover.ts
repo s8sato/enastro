@@ -19,6 +19,14 @@ export interface VaultFile {
   filePath: string;
   /** Raw file contents. */
   raw: string;
+  /**
+   * Last-modified time (`fs.Stat.mtime`), as epoch milliseconds. Used to
+   * display/search a note's last-modified timestamp (REQ-UX-007). Only
+   * `mtime` is captured, not `birthtime` ("created" time): birthtime is
+   * unreliable on many Linux filesystems and gets reset on a fresh git
+   * clone/checkout, so it would not be a meaningful "created" signal.
+   */
+  modifiedAt: number;
 }
 
 /**
@@ -51,7 +59,12 @@ export function discoverVault(vaultDir: string): VaultFile[] {
       const basename = path.basename(entry, ".md");
       const id = basename.normalize("NFC");
 
-      files.push({ id, filePath: fullPath, raw: readFileSync(fullPath, "utf-8") });
+      files.push({
+        id,
+        filePath: fullPath,
+        raw: readFileSync(fullPath, "utf-8"),
+        modifiedAt: stat.mtime.getTime(),
+      });
     }
   };
 

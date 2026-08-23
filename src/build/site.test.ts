@@ -53,6 +53,15 @@ describe("buildSite (fixtures/basic-vault)", () => {
     expect(noteA).toContain('<script type="module" src="../assets/copy-id.mjs"></script>');
     // Every note page links back to the index/landing page (REQ-UX-006).
     expect(noteA).toContain('<nav><a href="../index.html">All notes</a></nav>');
+    // Every note page shows its last-modified timestamp, formatted in UTC
+    // (REQ-UX-007). The exact value depends on the fixture file's real
+    // mtime (checkout-dependent), so only the format is asserted here.
+    expect(noteA).toMatch(
+      /<p class="modified">Last modified: \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC<\/p>/,
+    );
+    // Tags are links to the index page pre-filtered by that tag (REQ-UX-008).
+    expect(noteA).toContain('<a href="../index.html?tags=example">#example</a>');
+    expect(noteA).toContain('<a href="../index.html?tags=inline-tag">#inline-tag</a>');
 
     const noteB = readFileSync(path.join(outDir, "notes", "note-b.html"), "utf-8");
     // note-a links to note-b twice, so note-a should appear as a backlink.
@@ -73,5 +82,17 @@ describe("buildSite (fixtures/basic-vault)", () => {
       "note-c-alias",
       "note-d-broken-link",
     ]);
+
+    // graph.json's schema is a closed whitelist (id/title/tags only) and
+    // deliberately does NOT carry modifiedAt (see GraphNode.modifiedAt's
+    // doc comment); it is only exposed via note pages and search-index.json.
+    for (const node of graphJson.nodes) {
+      expect(Object.keys(node).sort()).toEqual(["id", "tags", "title"]);
+    }
+
+    const searchIndex = JSON.parse(readFileSync(path.join(outDir, "search-index.json"), "utf-8"));
+    for (const entry of searchIndex) {
+      expect(entry.modifiedAt).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC$/);
+    }
   });
 });

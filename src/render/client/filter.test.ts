@@ -2,10 +2,34 @@ import { describe, expect, it } from "vitest";
 import { filterEntries } from "./filter.mjs";
 
 const entries = [
-  { id: "a", title: "Apple Pie", tags: ["food", "dessert"], text: "A sweet dessert." },
-  { id: "b", title: "Banana Bread", tags: ["food", "bread"], text: "A tasty loaf." },
-  { id: "c", title: "Compiler Design", tags: ["tech"], text: "About parsers and codegen." },
-  { id: "legacy-filename", title: "Renamed Note", tags: [], text: "Nothing related here." },
+  {
+    id: "a",
+    title: "Apple Pie",
+    tags: ["food", "dessert"],
+    text: "A sweet dessert.",
+    modifiedAt: "2026-01-01 00:00 UTC",
+  },
+  {
+    id: "b",
+    title: "Banana Bread",
+    tags: ["food", "bread"],
+    text: "A tasty loaf.",
+    modifiedAt: "2026-02-02 00:00 UTC",
+  },
+  {
+    id: "c",
+    title: "Compiler Design",
+    tags: ["tech"],
+    text: "About parsers and codegen.",
+    modifiedAt: "2026-03-03 00:00 UTC",
+  },
+  {
+    id: "legacy-filename",
+    title: "Renamed Note",
+    tags: [],
+    text: "Nothing related here.",
+    modifiedAt: "2026-04-04 00:00 UTC",
+  },
 ];
 
 describe("filterEntries (REQ-UX-001, REQ-UX-002)", () => {
@@ -37,6 +61,10 @@ describe("filterEntries (REQ-UX-001, REQ-UX-002)", () => {
 
   it("returns an empty array when nothing matches", () => {
     expect(filterEntries(entries, "nonexistent", [])).toEqual([]);
+  });
+
+  it("matches against modifiedAt (REQ-UX-007)", () => {
+    expect(filterEntries(entries, "2026-02-02", [])).toEqual(["b"]);
   });
 });
 

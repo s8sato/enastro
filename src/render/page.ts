@@ -5,14 +5,23 @@ export interface RenderNotePageParams {
   node: PublicNode;
   bodyHtml: string;
   backlinks: PublicNode[];
+  /** Last-modified timestamp, already formatted (REQ-UX-007), e.g.
+   * "2026-08-23 12:34 UTC". Not part of `PublicNode`/`graph.json` (see
+   * `GraphNode.modifiedAt`'s doc comment). */
+  modifiedAt: string;
 }
 
-/** Assembles a full HTML page for a single published note (REQ-UX-001~004, REQ-UX-006). */
+/** Assembles a full HTML page for a single published note (REQ-UX-001~004, REQ-UX-006, REQ-UX-007, REQ-UX-008). */
 export function renderNotePage(params: RenderNotePageParams): string {
-  const { node, bodyHtml, backlinks } = params;
+  const { node, bodyHtml, backlinks, modifiedAt } = params;
 
   const tagsHtml = node.tags.length
-    ? `<ul class="tags">${node.tags.map((tag) => `<li>#${escapeHtml(tag)}</li>`).join("")}</ul>`
+    ? `<ul class="tags">${node.tags
+        .map(
+          (tag) =>
+            `<li><a href="../index.html?tags=${encodeURIComponent(tag)}">#${escapeHtml(tag)}</a></li>`,
+        )
+        .join("")}</ul>`
     : "";
 
   const backlinksHtml = backlinks.length
@@ -30,6 +39,7 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <body>
 <nav><a href="../index.html">All notes</a></nav>
 <p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button></p>
+<p class="modified">Last modified: ${escapeHtml(modifiedAt)}</p>
 ${tagsHtml}
 <article>${bodyHtml}</article>
 ${backlinksHtml}

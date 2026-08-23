@@ -48,6 +48,7 @@ export function buildGraph(vaultDir: string): BuildGraphResult {
     publish: parsed.frontmatter.publish,
     path: file.filePath,
     body: parsed.body,
+    modifiedAt: file.modifiedAt,
   }));
 
   const index = buildResolutionIndex(nodes);

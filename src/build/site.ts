@@ -6,6 +6,7 @@ import { computeBacklinks } from "../graph/backlinks.js";
 import { buildPublicProjection } from "../projection/build.js";
 import type { PublicNode } from "../projection/types.js";
 import { renderIndexPage, renderNoteBody, renderNotePage } from "../render/index.js";
+import { formatTimestamp } from "../render/format-timestamp.js";
 import { loadVaultConfig } from "../vault/config.js";
 import { discoverAttachments } from "../vault/discover-attachments.js";
 import { buildSearchIndexEntry, type SearchIndexEntry } from "./search-index.js";
@@ -52,6 +53,7 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
   const backlinksByTarget = computeBacklinks(sortedEdges);
   const publicNodeById = new Map(sortedNodes.map((node) => [node.id, node]));
   const bodyById = new Map(graph.nodes.map((node) => [node.id, node.body]));
+  const modifiedAtById = new Map(graph.nodes.map((node) => [node.id, node.modifiedAt]));
 
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(path.join(outDir, "notes"), { recursive: true });
@@ -73,6 +75,7 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
   for (const node of sortedNodes) {
     const body = bodyById.get(node.id) ?? "";
     const { html: bodyHtml } = renderNoteBody(body, graph, { attachments, publishedAttachmentIds });
+    const modifiedAt = formatTimestamp(modifiedAtById.get(node.id) ?? 0);
 
     const backlinkNodes = [
       ...new Map(
@@ -83,12 +86,12 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
       ).values(),
     ].sort((a, b) => a.id.localeCompare(b.id));
 
-    const page = renderNotePage({ node, bodyHtml, backlinks: backlinkNodes });
+    const page = renderNotePage({ node, bodyHtml, backlinks: backlinkNodes, modifiedAt });
     const notePath = path.join(outDir, "notes", `${node.id}.html`);
     mkdirSync(path.dirname(notePath), { recursive: true });
     writeFileSync(notePath, page, "utf-8");
 
-    searchEntries.push(buildSearchIndexEntry(node, bodyHtml));
+    searchEntries.push(buildSearchIndexEntry(node, bodyHtml, modifiedAt));
   }
 
   writeFileSync(path.join(outDir, "index.html"), renderIndexPage(sortedNodes), "utf-8");

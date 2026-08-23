@@ -95,4 +95,22 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
     await expect.poll(() => page.url()).toContain("/notes/note-b.html");
     await expect.poll(() => page.locator("article h1").textContent()).toBe("Note B");
   });
+
+  it("clicking a tag on a note page jumps to the index page pre-filtered by that tag (REQ-UX-008)", async () => {
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+
+    await page.click('a[href="../index.html?tags=example"]');
+
+    await expect.poll(() => page.url()).toContain("/index.html?tags=example");
+    await page.waitForSelector("#tag-filters input");
+    await expect
+      .poll(() => page.locator('#tag-filters input[value="example"]').isChecked())
+      .toBe(true);
+    await expect
+      .poll(() => page.locator('li[data-id="note-a"]').isVisible())
+      .toBe(true);
+    await expect
+      .poll(() => page.locator('li[data-id="note-b"]').isVisible())
+      .toBe(false);
+  });
 });
