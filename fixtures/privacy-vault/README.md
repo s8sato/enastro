@@ -35,9 +35,6 @@ privacy invariant（非公開情報の非漏洩）を検証するための vault
   記録されること（REQ-PUB-004）。ただし実際のビルドログファイルへの出力・`dist/` 生成は
   CLI 実装ループ以降の対象であり、まだ存在しない。
 
-`attachments/public.png`, `attachments/private.png` および添付ファイル allowlist
-（REQ-PUB-006, REQ-SEC-002）は未実装。別途「添付ファイル公開」ループで扱う。
-
 artifact 生成（`src/build/site.ts`）も本 vault で検証済み: `src/build/site.privacy.test.ts`
 が `dist/` 配下の全ファイルをスキャンし、非公開ノートのタイトル・タグ・alias
 （`Private Note`, `private-secret`, `confidential-alias`）がどこにも出現しないこと、
@@ -47,3 +44,17 @@ artifact 生成（`src/build/site.ts`）も本 vault で検証済み: `src/build
 なお `another-public-note.md` の地の文（公開ノートの著者自身が書いた説明文）が
 「private-note」という語を字面として含む箇所は privacy scan の対象外としている
 （非公開ノートの内容から自動的に漏れた情報ではないため）。
+
+`attachments/public.png`, `attachments/private.png` および `enastro.config.json`
+（`{ "publishAttachments": ["attachments/public.png"] }`）を作成し、`public-note.md`
+から両方の添付ファイルを `![[public.png]]` / `![[private.png]]` で embed している
+（REQ-PUB-006, REQ-SEC-002, ADR-0003 Mechanism）。
+
+- `src/vault/config.test.ts`, `src/vault/discover-attachments.test.ts`: config 読み込み・
+  添付ファイル探索の unit test。
+- `src/render/substitute-links.test.ts`: allowlist 済み添付の embed/link 置換、非allowlist
+  添付の完全削除の unit test。
+- `src/build/site.privacy.test.ts`: この vault を実際に `buildSite()` で build し、
+  `dist/attachments/public.png` のみが存在しソース内容と一致すること、
+  `private.png` というファイル名の断片が `dist/` のどこにも出現しないことを確認する
+  artifact レベルの検証。

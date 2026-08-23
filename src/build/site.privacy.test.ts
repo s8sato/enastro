@@ -74,4 +74,26 @@ describe("buildSite privacy scan (fixtures/privacy-vault)", () => {
     expect(publicNote).not.toContain("private-note.html");
     expect(publicNote).not.toContain("broken-link");
   });
+
+  it("publishes only the allowlisted attachment (REQ-PUB-006, REQ-SEC-002, ADR-0003)", () => {
+    outDir = mkdtempSync(path.join(tmpdir(), "enastro-privacy-"));
+    buildSite(vaultDir, outDir);
+
+    const publishedPath = path.join(outDir, "attachments", "public.png");
+    const sourcePath = path.join(vaultDir, "attachments", "public.png");
+    expect(readFileSync(publishedPath)).toEqual(readFileSync(sourcePath));
+
+    // The non-allowlisted attachment must never be copied into dist/, and
+    // its filename must not appear anywhere in the artifact.
+    const attachmentFiles = readdirSync(path.join(outDir, "attachments"));
+    expect(attachmentFiles).toEqual(["public.png"]);
+
+    for (const file of readAllFiles(outDir)) {
+      const content = readFileSync(file, "utf-8");
+      expect(content, `${path.relative(outDir, file)} must not mention private.png`).not.toContain("private.png");
+    }
+
+    const publicNote = readFileSync(path.join(outDir, "notes", "public-note.html"), "utf-8");
+    expect(publicNote).toContain('src="../attachments/public.png"');
+  });
 });

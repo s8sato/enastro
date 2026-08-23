@@ -1,10 +1,12 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { buildGraph } from "../graph/build.js";
 import { computeBacklinks } from "../graph/backlinks.js";
 import { buildPublicProjection } from "../projection/build.js";
 import type { PublicNode } from "../projection/types.js";
 import { renderIndexPage, renderNoteBody, renderNotePage } from "../render/index.js";
+import { loadVaultConfig } from "../vault/config.js";
+import { discoverAttachments } from "../vault/discover-attachments.js";
 import { buildSearchIndexEntry, type SearchIndexEntry } from "./search-index.js";
 
 export interface BuildSiteResult {
@@ -23,6 +25,15 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
   const graph = buildGraph(vaultDir);
   const { projection, warnings } = buildPublicProjection(graph);
 
+  const config = loadVaultConfig(vaultDir);
+  const attachments = discoverAttachments(vaultDir);
+  const attachmentById = new Map(attachments.map((attachment) => [attachment.id, attachment]));
+  // Only allowlisted attachments that actually exist in the vault are
+  // published (REQ-PUB-006, REQ-SEC-002, ADR-0003).
+  const publishedAttachmentIds = new Set(
+    config.publishAttachments.filter((id) => attachmentById.has(id)),
+  );
+
   // Sort nodes/edges for deterministic, reproducible output (REQ-BUILD-001).
   const sortedNodes = [...projection.nodes].sort((a, b) => a.id.localeCompare(b.id));
   const sortedEdges = [...projection.edges].sort((a, b) =>
@@ -36,11 +47,18 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(path.join(outDir, "notes"), { recursive: true });
 
+  for (const attachmentId of [...publishedAttachmentIds].sort()) {
+    const attachment = attachmentById.get(attachmentId)!;
+    const destPath = path.join(outDir, ...attachmentId.split("/"));
+    mkdirSync(path.dirname(destPath), { recursive: true });
+    copyFileSync(attachment.filePath, destPath);
+  }
+
   const searchEntries: SearchIndexEntry[] = [];
 
   for (const node of sortedNodes) {
     const body = bodyById.get(node.id) ?? "";
-    const { html: bodyHtml } = renderNoteBody(body, graph);
+    const { html: bodyHtml } = renderNoteBody(body, graph, { attachments, publishedAttachmentIds });
 
     const backlinkNodes = [
       ...new Map(

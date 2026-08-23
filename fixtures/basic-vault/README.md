@@ -12,7 +12,9 @@
 - `note-b.md`: `publish: true`。`note-a.md` からの backlink が生成されることを検証する対象。
 - `note-c-alias.md`: `publish: true`。`aliases: [note-b]` のように、別ノートのタイトルと衝突する alias を持つ（REQ-CONTENT-006 の挙動確認用）。
 - `note-d-broken-link.md`: `publish: true`。存在しないノートへの `[[does-not-exist]]` を含む。
-- `enastro.config.*`（仮称）: publish 対象ディレクトリ等の最小設定。
+
+この vault には添付ファイルが存在しないため `enastro.config.json`（`publishAttachments` allowlist、
+fixtures/privacy-vault 参照）は不要であり、作成していない。
 
 ## 検証方法
 
@@ -25,8 +27,6 @@
 `note-a.md`, `note-b.md`, `note-c-alias.md`, `note-d-broken-link.md` を作成済み。
 これらは `src/parser/index.test.ts`（frontmatter/wikilink/embed/tag 抽出）と
 `src/graph/build.test.ts`（node/edge/backlink 構築）の unit test から参照される。
-
-`enastro.config.*` は未作成（publish selection を扱う次ループ以降で追加する）。
 
 alias とタイトルの衝突（`note-c-alias.md` の `aliases: [note-b]` と `note-b.md` の
 タイトルの衝突、REQ-CONTENT-006）は **候補A（タイトル一致を alias 一致より優先）**

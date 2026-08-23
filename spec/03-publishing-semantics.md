@@ -25,7 +25,10 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 
 - 添付ファイル（画像等）は、公開ノートから参照されているという理由だけでは公開されない。
 - 添付ファイルは、ファイル自体に明示的な公開マーク（allowlist）が付与されている場合のみ公開対象になる（REQ-PUB-006, REQ-SEC-002）。
-- allowlist の具体的な指定方法（例: 添付専用の frontmatter、サイドカーファイル、config でのパターン指定）は実装ループで PROPOSED として提示し、承認を得る。
+- allowlist の具体的な指定方法: vault 直下の `enastro.config.json` の `publishAttachments` フィールド（vault 相対パスの完全一致の文字列配列）で指定する（ADR-0003 Mechanism 参照）。glob パターンは v0.1 では DEFERRED。
+- config ファイルが存在しない、または当該パスが記載されていない添付ファイルは非公開のまま（private by default）。
+- allowlist された添付ファイルは、元の vault 相対パスを保持したまま `dist/<同じ相対パス>` にコピーされる。
+- 公開ノートが非 allowlist の添付ファイルを参照した場合、非公開ノートへの参照（§2）と同様に完全に除去される（表示テキストを含む）。
 
 ## 4. 公開リポジトリに配置してよい内容 [DECIDED]
 

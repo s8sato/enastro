@@ -74,4 +74,43 @@ describe("substituteLinks", () => {
 
     expect(text).toBe("Inline `[[B]]` and:\n```\n[[B]]\n```");
   });
+
+  it("rewrites an embed of an allowlisted attachment into a Markdown image pointing at ../attachments/<id>", () => {
+    const g = graph([{ id: "a", title: "A", aliases: [], tags: [], publish: true, path: "/a.md", body: "" }]);
+    const attachments = [{ id: "attachments/public.png", filePath: "/vault/attachments/public.png" }];
+
+    const { text, removedTargets } = substituteLinks("See ![[public.png]].", g, {
+      attachments,
+      publishedAttachmentIds: new Set(["attachments/public.png"]),
+    });
+
+    expect(text).toBe("See ![public.png](../attachments/public.png).");
+    expect(removedTargets).toEqual([]);
+  });
+
+  it("rewrites a plain (non-embed) link to an allowlisted attachment as a Markdown link", () => {
+    const g = graph([{ id: "a", title: "A", aliases: [], tags: [], publish: true, path: "/a.md", body: "" }]);
+    const attachments = [{ id: "attachments/public.png", filePath: "/vault/attachments/public.png" }];
+
+    const { text } = substituteLinks("See [[public.png|the image]].", g, {
+      attachments,
+      publishedAttachmentIds: new Set(["attachments/public.png"]),
+    });
+
+    expect(text).toBe("See [the image](../attachments/public.png).");
+  });
+
+  it("deletes an embed of a non-allowlisted attachment entirely (ADR-0003)", () => {
+    const g = graph([{ id: "a", title: "A", aliases: [], tags: [], publish: true, path: "/a.md", body: "" }]);
+    const attachments = [{ id: "attachments/private.png", filePath: "/vault/attachments/private.png" }];
+
+    const { text, removedTargets } = substituteLinks("See ![[private.png]].", g, {
+      attachments,
+      publishedAttachmentIds: new Set(),
+    });
+
+    expect(text).toBe("See .");
+    expect(text).not.toContain("private.png");
+    expect(removedTargets).toEqual(["private.png"]);
+  });
 });
