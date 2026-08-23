@@ -39,10 +39,13 @@ vault 内で、あるノートの `aliases:` frontmatter が別ノートのタ�
 - 同一の alias 文字列が複数ノート間で衝突する場合（alias 同士の衝突）は本項の対象外
   であり、別途 OPEN（Graph IR 構築ループで暫定挙動を実装し、必要なら別途 ADR 化する）。
 
-### 2.3 broken link（存在しないノートへの link）[PROPOSED]
+### 2.3 broken link（存在しないノートへの link）[DECIDED]
 
 - リンク先ノートが存在しない場合、build を失敗させない（REQ-CONTENT-007, MUST）。
-- 表示方法（例: プレーンテキスト化 / `.broken-link` クラス付与）は UX 観点の詳細設計であり、[06-ux-and-visual-design.md](06-ux-and-visual-design.md) で確定する。
+- 表示方法: 元のリンク文字列（alias 表示名があればそれ、なければリンク先文字列）を
+  プレーンテキストとして表示し、`<span class="broken-link">` でラップする
+  （`src/render/substitute-links.ts`）。非公開ノートへの解決済みリンク（2.1参照）とは
+  異なり、broken link は private な情報を一切含まないため、そのまま表示してよい。
 
 ## 3. Backlink [DECIDED]
 

@@ -78,7 +78,7 @@ minimal Markdown vault
 | REQ-CONTENT-004 | パーサーは YAML frontmatter（少なくとも `publish` とタグ相当のフィールド）を解釈 **MUST**。 | DECIDED |
 | REQ-CONTENT-005 | 最小セット外の Obsidian 構文（callout・見出しリンク・block 参照・dataview・canvas 等）は、エラーにせずプレーンテキストとして素通しする **MUST**。 | DECIDED |
 | REQ-CONTENT-006 | alias と同名ノートが衝突する場合、タイトル一致を alias 一致より優先して解決する **MUST**（候補A、02-content-semantics.md §2.2 参照）。 | DECIDED |
-| REQ-CONTENT-007 | 存在しないノートへの link（broken link）は build を失敗させず処理される **MUST**。表示方法（プレーンテキスト化 / 破損マーカー等）は UX ループで決定する。 | PROPOSED |
+| REQ-CONTENT-007 | 存在しないノートへの link（broken link）は build を失敗させず処理される **MUST**。表示方法はプレーンテキスト化し、`span.broken-link` を付与する（02-content-semantics.md §2.3 参照）。 | DECIDED |
 | REQ-CONTENT-008 | 日本語ファイル名・Unicode を含むノート名を正しく解決 **MUST**。 | DECIDED |
 
 ### 4.3 GRAPH
@@ -115,7 +115,7 @@ minimal Markdown vault
 | ID | 要件 | Status |
 |---|---|---|
 | REQ-BUILD-001 | 同一の入力 vault と設定に対して、build は content-hash が一致する artifact を生成 **MUST**（deterministic build）。 | DECIDED |
-| REQ-BUILD-002 | artifact のファイル構成・JSON schema はバージョニングされ、schema validation で検証可能である **SHOULD**。v0.1 での schema は最小限とする。 | PROPOSED |
+| REQ-BUILD-002 | artifact のファイル構成・JSON schema はバージョニングされ、schema validation で検証可能である **SHOULD**。v0.1 での schema は最小限とし、`graph.json` は手書きバリデータ（ajv 等の依存なし）で検証する。 | DECIDED |
 
 ### 4.7 PERF
 

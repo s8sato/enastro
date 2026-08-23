@@ -36,5 +36,23 @@ alias とタイトルの衝突（`note-c-alias.md` の `aliases: [note-b]` と `
 
 Graph IR の node/edge/backlink 構築（REQ-GRAPH-001〜003）と broken link の非致命的な
 扱い（REQ-CONTENT-007）は `src/graph/**` で実装済み。publish selection・privacy
-projection（REQ-PUB-001〜005）・artifact 生成（REQ-BUILD-001/002, REQ-UX-001〜004）は
-未実装であり、次ループ以降の対象。
+projection（REQ-PUB-001〜005）は `src/projection/**` で実装済み。
+
+artifact 生成（`src/build/site.ts`）と Markdown→HTML レンダリング（`src/render/**`）
+も実装済みで、この vault から `dist/index.html`, `dist/notes/<id>.html`,
+`dist/graph.json`, `dist/search-index.json` を生成できる（REQ-BUILD-001/002,
+REQ-CONTENT-007, REQ-UX-003/004）。検証内容:
+
+- `src/render/substitute-links.test.ts`: wikilink/embed の3ケース（公開リンクへの
+  置換・非公開ターゲットの完全削除・broken link の `.broken-link` span 化）。
+- `src/build/site.test.ts`: この vault に対する統合テスト（出力ファイル一覧、
+  `note-a` → `note-b` のリンク、`note-b` の backlink 表示、`note-d-broken-link`
+  の broken-link span、`graph.json` の schema validation）。
+- `src/build/site.golden.test.ts`: 同一 vault を2回 build し、出力の content hash
+  が一致することを確認（REQ-BUILD-001）。
+- `src/build/validate-graph-schema.test.ts`: `graph.json` の手書きバリデータの
+  unit test（ajv 等の依存なし、REQ-BUILD-002）。
+
+なお REQ-UX-001（全文検索）・REQ-UX-002（タグ検索/フィルタ）は `search-index.json`
+という**データ**の生成までが実装済みで、検索 UI（フロントエンド JS）自体は未実装
+であり、次ループ以降の対象。CLI（`bin/enastro.mjs`）は最小実装済み。

@@ -24,6 +24,7 @@ export function buildGraph(vaultDir: string): KnowledgeGraph {
     tags: [...parsed.frontmatter.tags, ...parsed.inlineTags],
     publish: parsed.frontmatter.publish,
     path: file.filePath,
+    body: parsed.body,
   }));
 
   const index = buildResolutionIndex(nodes);

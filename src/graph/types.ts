@@ -13,6 +13,8 @@ export interface GraphNode {
   tags: string[];
   publish: boolean;
   path: string;
+  /** The document body (frontmatter removed), used by the render stage. */
+  body: string;
 }
 
 /** A directed edge (REQ-GRAPH-002) produced from a wikilink or embed. */

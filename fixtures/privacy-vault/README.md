@@ -37,3 +37,13 @@ privacy invariant（非公開情報の非漏洩）を検証するための vault
 
 `attachments/public.png`, `attachments/private.png` および添付ファイル allowlist
 （REQ-PUB-006, REQ-SEC-002）は未実装。別途「添付ファイル公開」ループで扱う。
+
+artifact 生成（`src/build/site.ts`）も本 vault で検証済み: `src/build/site.privacy.test.ts`
+が `dist/` 配下の全ファイルをスキャンし、非公開ノートのタイトル・タグ・alias
+（`Private Note`, `private-secret`, `confidential-alias`）がどこにも出現しないこと、
+`private-note.html` というページが生成されないこと、`graph.json` に `private-note`
+という id の node が含まれないこと、`public-note.html` から `private-note.html` への
+リンクが一切存在しないことを確認している（REQ-SEC-001, ADR-0002）。
+なお `another-public-note.md` の地の文（公開ノートの著者自身が書いた説明文）が
+「private-note」という語を字面として含む箇所は privacy scan の対象外としている
+（非公開ノートの内容から自動的に漏れた情報ではないため）。

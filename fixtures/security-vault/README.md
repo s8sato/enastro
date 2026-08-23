@@ -33,3 +33,12 @@
 現時点ではノート本文（Markdown + 埋め込み raw HTML）に直接 `sanitizeHtml()` を適用して
 検証しており、Markdown → HTML への変換（render ループ）はまだ存在しない。実際の公開
 パイプラインでは、render 後の HTML に対しても同じ関数を適用する想定。
+
+render ループ以降、`src/render/render-note.ts` が `markdown-it`（`html: true`）で
+Markdown を HTML に変換した後、同じ `sanitizeHtml()` を適用する構成になった。
+`src/build/site.security.test.ts` はこの vault 全体を実際に `buildSite()` で
+build し、生成された `dist/notes/*.html` のいずれにも `<script>` タグ・`on*`
+イベントハンドラ属性・`javascript:` スキーム・`<svg>` 要素が残っていないことを
+artifact レベルで確認している（各ノートの説明文がこれらの語をバッククォート内の
+プレーンテキストとして言及すること自体は問題なく、正規表現は実行可能な攻撃構文
+のみにマッチするようにしている）。

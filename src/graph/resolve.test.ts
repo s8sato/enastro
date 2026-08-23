@@ -10,6 +10,7 @@ function node(overrides: Partial<GraphNode>): GraphNode {
     tags: overrides.tags ?? [],
     publish: overrides.publish ?? true,
     path: overrides.path ?? "/path",
+    body: overrides.body ?? "",
   };
 }
 
