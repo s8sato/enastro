@@ -82,9 +82,11 @@ export function renderIndexPage(nodes: PublicNode[]): string {
 </head>
 <body>
 <nav><a href="graph.html">Graph view</a></nav>
+<header class="index-header">
 <h1>Notes</h1>
 <input type="search" id="search-box" placeholder="Search notes...">
 <div id="tag-filters"></div>
+</header>
 <p id="no-results" hidden>No notes match the current search/filter.</p>
 <ul id="note-list">${items}</ul>
 <script type="module" src="assets/search.mjs"></script>
