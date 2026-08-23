@@ -66,6 +66,11 @@ describe("buildSite (fixtures/basic-vault)", () => {
     // Tags are links to the index page pre-filtered by that tag (REQ-UX-008).
     expect(noteA).toContain('<a href="../index.html?tags=example">#example</a>');
     expect(noteA).toContain('<a href="../index.html?tags=inline-tag">#inline-tag</a>');
+    // ...including inline `#tag` mentions inside the note body itself, not
+    // just the tag list near the note id (REQ-UX-008).
+    expect(noteA).toContain(
+      'It also has an inline <a href="../index.html?tags=inline-tag">#inline-tag</a>.',
+    );
 
     const noteB = readFileSync(path.join(outDir, "notes", "note-b.html"), "utf-8");
     // note-a links to note-b twice, so note-a should appear as a backlink.
