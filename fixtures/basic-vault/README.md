@@ -22,4 +22,15 @@
 
 ## 現状
 
-このディレクトリはまだプレースホルダーであり、実際のノートファイルは最初の vertical spec loop で作成する。
+`note-a.md`, `note-b.md`, `note-c-alias.md`, `note-d-broken-link.md` を作成済み。
+これらは `src/parser/index.test.ts` の unit test から参照される。
+
+`enastro.config.*` は未作成（publish selection を扱う次ループ以降で追加する）。
+
+alias とタイトルの衝突（`note-c-alias.md` の `aliases: [note-b]` と `note-b.md` の
+タイトルの衝突、REQ-CONTENT-006）について、解決規則自体はまだ実装していない
+（parser は wikilink/alias をそのまま抽出するのみで、名前解決は Graph IR 構築ループの
+対象）。提案する優先順位は次の通り: **候補A（タイトル一致を alias 一致より優先）**。
+理由は、タイトルが vault 内での一意な識別子であるべきで、alias による上書きを許すと
+衝突時の挙動が直感に反するため。この提案はユーザー承認待ちであり、承認後に
+`spec/02-content-semantics.md` §2.2 と `REQ-CONTENT-006` の Status を更新する。
