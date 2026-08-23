@@ -10,6 +10,7 @@ privacy invariant（非公開情報の非漏洩）を検証するための vault
 
 - `public-note.md`: `publish: true`。非公開ノート `private-note.md` へ `[[private-note]]` でリンクし、さらに `![[private-note]]` で embed する。
 - `private-note.md`: `publish: false`（または未指定）。機微な名前・タグ・aliasを持つ。
+- `another-public-note.md`: `publish: true`。`public-note.md` へ `[[public-note]]` でリンクする（通常の公開間 edge/backlink が保持されることを確認する対照ケース）。
 - `attachments/public.png`: 公開ノートから参照され、かつ明示的に公開マークが付与された添付ファイル。
 - `attachments/private.png`: 公開ノートから参照されているが、公開マークが付与されていない添付ファイル（公開されてはならない）。
 
@@ -21,4 +22,18 @@ privacy invariant（非公開情報の非漏洩）を検証するための vault
 
 ## 現状
 
-このディレクトリはまだプレースホルダーであり、実際のノート・添付ファイルは privacy 検証を扱う vertical slice loop で作成する。
+`public-note.md`, `private-note.md`, `another-public-note.md` を作成済み。
+`src/projection/build.test.ts` で `buildPublicProjection`（REQ-PUB-001, 002, 003,
+005, REQ-SEC-001）を検証している。具体的には:
+
+- `private-note` が public projection の nodes/edges のいずれにも一切現れないこと
+  （id・title・tags・alias の文字列レベルでの privacy scan 相当のテストを含む）
+- `public-note` → `private-note` への wikilink と embed の両方の edge が除去されること
+- `another-public-note` → `public-note` という通常の公開間 edge/backlink は保持される
+  こと（対照ケース）
+- 除去された edge について、著者向けの warning（関数の戻り値 `warnings: string[]`）が
+  記録されること（REQ-PUB-004）。ただし実際のビルドログファイルへの出力・`dist/` 生成は
+  CLI 実装ループ以降の対象であり、まだ存在しない。
+
+`attachments/public.png`, `attachments/private.png` および添付ファイル allowlist
+（REQ-PUB-006, REQ-SEC-002）は未実装。別途「添付ファイル公開」ループで扱う。
