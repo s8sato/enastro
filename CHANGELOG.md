@@ -32,6 +32,29 @@ v0.1 の golden path の上に、Graph UI・性能測定・レスポンシブス
   `actions/upload-pages-artifact` / `actions/deploy-pages` のみを用いて GitHub Pages へ
   自動公開するパイプラインを追加。エンドユーザーが自分の vault を同様に公開できる、独立した
   再利用可能な workflow テンプレートを README に追加（REQ-OPS-002〜003, ADR-0013）。
+- **build 時シンタックスハイライト**: markdown コードブロックを highlight.js による静的（ビルド時）
+  ハイライトに対応。クライアント JS の追加なしで言語別の配色を実現し、REQ-UX-004（portable static
+  artifact）・REQ-BUILD-001（決定的 build）を維持したまま、sanitize allowlist（REQ-SEC-003）を
+  `.hljs` 系クラスに拡張。
+- **markdown 記法ショーケースノート**: `fixtures/demo-vault` に、対応済みの Markdown/OFM 記法
+  （箇条書き・強調・打ち消し線・インラインコード・コードブロック・引用・テーブル・画像埋め込み等、
+  REQ-CONTENT-001〜005）を一望できるデモノートを追加。
+- **Graph UI の細部改善**: タッチ操作でのノードプレビュー（1 回目のタップでハイライトのみ、2 回目の
+  タップでノートページへ遷移）とマウスホバーの動作を分離し、モバイルで指がラベルを隠して確認できない
+  問題を解消。全ノードのエネルギー粒子放出タイミングを単一の共有サイクルタイマーへ統一し、edge ごとに
+  バラバラだった発光アニメーションを同期（REQ-UX-010）。
+- **ダークテーマの視認性改善**: 記事本文のコントラスト調整、コードブロック/インラインコード・引用・
+  テーブル・見出しレベルのスタイリングを他要素と統一し、判別しにくかった箇所を改善（REQ-UX-009）。
+
+### サプライチェーンセキュリティ強化
+
+- `ci.yml` / `deploy-demo.yml` の GitHub Actions 参照をすべて可変タグ（`@v4` 等）からコミット SHA
+  固定に変更し、上流タグの付け替えによる CI 改ざんリスクを低減。
+- `ci.yml` に `permissions: contents: read` を明示（最小権限化）し、`npm audit signatures` /
+  `npm audit --audit-level=high` の CI ステップを追加。
+- `.github/dependabot.yml` を新設し、npm / github-actions の週次更新 PR を有効化（SHA 固定により
+  止まるバージョン追従を補う）。
+- `package.json` に `engines.node >= 22` を追加し、CI の Node バージョンと明示的に対応させた。
 
 ### 参照 ADR
 
