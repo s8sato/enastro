@@ -41,7 +41,11 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
 
     await page.waitForSelector("#tag-filters input");
 
-    await page.fill("#search-box", "Note A");
+    // Query text unique to note-a's own body: since inline wikilinks now
+    // render with the target note's title as their label (ADR-0009), a
+    // query like "Note A" would also match note-b's body (which links back
+    // to note-a and would render that link as "Note A").
+    await page.fill("#search-box", "inline-tag");
 
     await expect
       .poll(() => page.locator('li[data-id="note-a"]').isVisible())
@@ -86,7 +90,7 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
   it("navigates from an inline wikilink in the note body to the linked note (REQ-CONTENT-001)", async () => {
     await page.goto(`${baseUrl}/notes/note-a.html`);
 
-    await page.click('article a:has-text("note-b")');
+    await page.click('article a:has-text("Note B")');
 
     await expect.poll(() => page.url()).toContain("/notes/note-b.html");
     await expect.poll(() => page.locator("article h1").textContent()).toBe("Note B");

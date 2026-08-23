@@ -7,7 +7,7 @@ export interface RenderNotePageParams {
   backlinks: PublicNode[];
 }
 
-/** Assembles a full HTML page for a single published note (REQ-UX-001~004). */
+/** Assembles a full HTML page for a single published note (REQ-UX-001~004, REQ-UX-006). */
 export function renderNotePage(params: RenderNotePageParams): string {
   const { node, bodyHtml, backlinks } = params;
 
@@ -28,6 +28,7 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <title>${escapeHtml(node.title)}</title>
 </head>
 <body>
+<nav><a href="../index.html">All notes</a></nav>
 <p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button></p>
 ${tagsHtml}
 <article>${bodyHtml}</article>

@@ -24,6 +24,9 @@ export interface SubstituteLinksResult {
  * their rendered form, according to the target's resolution/publish state:
  *
  * - resolved to a public note   -> a Markdown link to the published note.
+ *   The display text is the author-supplied `|alias` if present, otherwise
+ *   the target note's title (not its id/raw target text — ADR-0009: ids
+ *   are for writing/resolving links, titles are for displaying them).
  * - resolved to a private note  -> the occurrence is deleted entirely,
  *   including the author-supplied display text, since the display text
  *   itself may leak private information (ADR-0002, REQ-SEC-001). No trace
@@ -45,6 +48,7 @@ export function substituteLinks(
 ): SubstituteLinksResult {
   const index = buildResolutionIndex(graph.nodes);
   const publishById = new Map(graph.nodes.map((node) => [node.id, node.publish]));
+  const titleById = new Map(graph.nodes.map((node) => [node.id, node.title]));
   const attachmentIndex = buildAttachmentResolutionIndex(options.attachments ?? []);
   const publishedAttachmentIds = options.publishedAttachmentIds ?? new Set<string>();
   const removedTargets: string[] = [];
@@ -64,7 +68,12 @@ export function substituteLinks(
         const noteResult = resolveTarget(target, index);
         if (noteResult.status === "resolved") {
           if (publishById.get(noteResult.nodeId)) {
-            return `[${label}](${noteResult.nodeId}.html)`;
+            // The default (no explicit `|alias`) display text is the
+            // resolved note's title, not the raw target/id text: the id is
+            // for writing/resolving links, the title is for displaying them
+            // (ADR-0009).
+            const noteLabel = display ?? titleById.get(noteResult.nodeId) ?? label;
+            return `[${noteLabel}](${noteResult.nodeId}.html)`;
           }
 
           removedTargets.push(target);

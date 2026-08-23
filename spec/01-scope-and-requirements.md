@@ -101,6 +101,7 @@ minimal Markdown vault
 | REQ-UX-003 | 出力はノートごとに backlink を表示 **MUST**。 | DECIDED |
 | REQ-UX-004 | 出力は静的ホスティング可能でサーバーサイド runtime 不要な portable artifact である **MUST**。 | DECIDED |
 | REQ-UX-005 | v0.1 の主画面はノート/ドキュメントビューであり、Graph UI は主画面にしない。長期的には Graph UI を主画面に据える方針。 | DECIDED（方向性）/ OPEN（詳細 UX） |
+| REQ-UX-006 | ノートページには一覧ページ（`index.html`）へのナビゲーションリンクを常に表示する **SHOULD**。 | PROPOSED |
 
 ### 4.5 SEC
 

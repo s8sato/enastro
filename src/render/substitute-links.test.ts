@@ -7,7 +7,7 @@ function graph(nodes: KnowledgeGraph["nodes"]): KnowledgeGraph {
 }
 
 describe("substituteLinks", () => {
-  it("rewrites a resolved public link into a Markdown link to <id>.html (same-directory relative path)", () => {
+  it("rewrites a resolved public link into a Markdown link to <id>.html, using the target note's title as the label (ADR-0009)", () => {
     const g = graph([
       { id: "a", title: "A", aliases: [], tags: [], publish: true, path: "/a.md", body: "" },
       { id: "b", title: "B", aliases: [], tags: [], publish: true, path: "/b.md", body: "" },
@@ -15,7 +15,7 @@ describe("substituteLinks", () => {
 
     const { text, removedTargets } = substituteLinks("See [[b]] for details.", g);
 
-    expect(text).toBe("See [b](b.html) for details.");
+    expect(text).toBe("See [B](b.html) for details.");
     expect(removedTargets).toEqual([]);
   });
 
@@ -28,6 +28,25 @@ describe("substituteLinks", () => {
     const { text } = substituteLinks("See [[b|custom label]].", g);
 
     expect(text).toBe("See [custom label](b.html).");
+  });
+
+  it("uses the title, not the raw target/id text, as the label when id and title differ (ADR-0009)", () => {
+    const g = graph([
+      { id: "a", title: "A", aliases: [], tags: [], publish: true, path: "/a.md", body: "" },
+      {
+        id: "note-x",
+        title: "A Completely Different Title",
+        aliases: [],
+        tags: [],
+        publish: true,
+        path: "/note-x.md",
+        body: "",
+      },
+    ]);
+
+    const { text } = substituteLinks("See [[note-x]].", g);
+
+    expect(text).toBe("See [A Completely Different Title](note-x.html).");
   });
 
   it("deletes an occurrence entirely (including display text) when the target is unpublished", () => {
