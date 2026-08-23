@@ -16,7 +16,13 @@ import { buildSearchIndexEntry, type SearchIndexEntry } from "./search-index.js"
 // works whether this runs directly from src/ (tests, via vitest) or from
 // dist-ts/ (CLI, after `npm run build` + scripts/copy-client-assets.mjs).
 const CLIENT_ASSETS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "../render/client");
-const CLIENT_ASSET_FILENAMES = ["filter.mjs", "search.mjs", "copy-id.mjs"];
+const CLIENT_ASSET_FILENAMES = [
+  "filter.mjs",
+  "search.mjs",
+  "copy-id.mjs",
+  "format-local-time.mjs",
+  "local-time.mjs",
+];
 
 export interface BuildSiteResult {
   /** Human-readable warnings (e.g. edges dropped because the target was
@@ -75,7 +81,8 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
   for (const node of sortedNodes) {
     const body = bodyById.get(node.id) ?? "";
     const { html: bodyHtml } = renderNoteBody(body, graph, { attachments, publishedAttachmentIds });
-    const modifiedAt = formatTimestamp(modifiedAtById.get(node.id) ?? 0);
+    const modifiedAtEpochMs = modifiedAtById.get(node.id) ?? 0;
+    const modifiedAt = formatTimestamp(modifiedAtEpochMs);
 
     const backlinkNodes = [
       ...new Map(
@@ -86,7 +93,7 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
       ).values(),
     ].sort((a, b) => a.id.localeCompare(b.id));
 
-    const page = renderNotePage({ node, bodyHtml, backlinks: backlinkNodes, modifiedAt });
+    const page = renderNotePage({ node, bodyHtml, backlinks: backlinkNodes, modifiedAt, modifiedAtEpochMs });
     const notePath = path.join(outDir, "notes", `${node.id}.html`);
     mkdirSync(path.dirname(notePath), { recursive: true });
     writeFileSync(notePath, page, "utf-8");

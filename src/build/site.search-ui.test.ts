@@ -21,7 +21,13 @@ describe("buildSite: client-side search & tag filter UI (REQ-UX-001, REQ-UX-002)
     outDir = mkdtempSync(path.join(tmpdir(), "enastro-search-ui-"));
     buildSite(vaultDir, outDir);
 
-    for (const filename of ["filter.mjs", "search.mjs", "copy-id.mjs"]) {
+    for (const filename of [
+      "filter.mjs",
+      "search.mjs",
+      "copy-id.mjs",
+      "format-local-time.mjs",
+      "local-time.mjs",
+    ]) {
       const copied = readFileSync(path.join(outDir, "assets", filename));
       const source = readFileSync(path.join(clientAssetsDir, filename));
       expect(copied.equals(source)).toBe(true);

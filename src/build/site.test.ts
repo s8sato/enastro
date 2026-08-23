@@ -54,11 +54,15 @@ describe("buildSite (fixtures/basic-vault)", () => {
     // Every note page links back to the index/landing page (REQ-UX-006).
     expect(noteA).toContain('<nav><a href="../index.html">All notes</a></nav>');
     // Every note page shows its last-modified timestamp, formatted in UTC
-    // (REQ-UX-007). The exact value depends on the fixture file's real
-    // mtime (checkout-dependent), so only the format is asserted here.
+    // as a deterministic no-JS fallback (REQ-UX-007, REQ-BUILD-001), with the
+    // raw epoch ms also present so `local-time.mjs` can progressively
+    // enhance it into the viewer's local timezone. The exact value depends
+    // on the fixture file's real mtime (checkout-dependent), so only the
+    // format is asserted here.
     expect(noteA).toMatch(
-      /<p class="modified">Last modified: \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC<\/p>/,
+      /<p class="modified" data-modified="\d+">Last modified: \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC<\/p>/,
     );
+    expect(noteA).toContain('<script type="module" src="../assets/local-time.mjs"></script>');
     // Tags are links to the index page pre-filtered by that tag (REQ-UX-008).
     expect(noteA).toContain('<a href="../index.html?tags=example">#example</a>');
     expect(noteA).toContain('<a href="../index.html?tags=inline-tag">#inline-tag</a>');

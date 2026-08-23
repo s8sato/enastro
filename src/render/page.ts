@@ -5,15 +5,20 @@ export interface RenderNotePageParams {
   node: PublicNode;
   bodyHtml: string;
   backlinks: PublicNode[];
-  /** Last-modified timestamp, already formatted (REQ-UX-007), e.g.
-   * "2026-08-23 12:34 UTC". Not part of `PublicNode`/`graph.json` (see
-   * `GraphNode.modifiedAt`'s doc comment). */
+  /** Last-modified timestamp, already formatted in UTC (REQ-UX-007), e.g.
+   * "2026-08-23 12:34 UTC". Baked in as a fixed UTC string so the build
+   * stays deterministic (REQ-BUILD-001); `local-time.mjs` progressively
+   * enhances this into the *viewer's* local timezone client-side. Not part
+   * of `PublicNode`/`graph.json` (see `GraphNode.modifiedAt`'s doc comment). */
   modifiedAt: string;
+  /** The same timestamp as `modifiedAt`, as raw epoch milliseconds, so
+   * `local-time.mjs` can recompute it in the viewer's local timezone. */
+  modifiedAtEpochMs: number;
 }
 
 /** Assembles a full HTML page for a single published note (REQ-UX-001~004, REQ-UX-006, REQ-UX-007, REQ-UX-008). */
 export function renderNotePage(params: RenderNotePageParams): string {
-  const { node, bodyHtml, backlinks, modifiedAt } = params;
+  const { node, bodyHtml, backlinks, modifiedAt, modifiedAtEpochMs } = params;
 
   const tagsHtml = node.tags.length
     ? `<ul class="tags">${node.tags
@@ -39,11 +44,12 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <body>
 <nav><a href="../index.html">All notes</a></nav>
 <p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button></p>
-<p class="modified">Last modified: ${escapeHtml(modifiedAt)}</p>
+<p class="modified" data-modified="${modifiedAtEpochMs}">Last modified: ${escapeHtml(modifiedAt)}</p>
 ${tagsHtml}
 <article>${bodyHtml}</article>
 ${backlinksHtml}
 <script type="module" src="../assets/copy-id.mjs"></script>
+<script type="module" src="../assets/local-time.mjs"></script>
 </body>
 </html>
 `;

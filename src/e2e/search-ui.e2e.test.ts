@@ -114,3 +114,20 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
       .toBe(false);
   });
 });
+
+describe("browser E2E: local-timezone last-modified display (REQ-UX-007)", () => {
+  it("re-renders the UTC-fallback timestamp in the viewer's local timezone", async () => {
+    const context = await browser.newContext({ timezoneId: "Asia/Tokyo" });
+    const jstPage = await context.newPage();
+    try {
+      await jstPage.goto(`${baseUrl}/notes/note-a.html`);
+
+      await expect
+        .poll(() => jstPage.locator("p.modified").textContent())
+        .toMatch(/Last modified: \d{4}-\d{2}-\d{2} \d{2}:\d{2} \(UTC\+09:00\)/);
+    } finally {
+      await jstPage.close();
+      await context.close();
+    }
+  });
+});
