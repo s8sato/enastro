@@ -69,9 +69,14 @@ describe("buildSite (fixtures/compatibility-vault, REQ-CONTENT-005/008)", () => 
     expect(html).not.toContain('href="notes/日本語のノート.html#heading"');
 
     // dataview / canvas-like code blocks: pass through as plain code, with
-    // no special interpretation.
+    // no special interpretation. The JSON blob is now syntax-highlighted
+    // (server-side, via highlight.js) since it's tagged ```json, so its
+    // tokens are individually wrapped in `hljs-*` spans rather than
+    // appearing as one contiguous string — check the substrings that
+    // remain intact within a single span instead of the whole line.
     expect(html).toContain("LIST FROM #tag");
-    expect(html).toContain('{"nodes": [], "edges": []}');
+    expect(html).toContain('"nodes"');
+    expect(html).toContain('"edges"');
     // Scoped to the rendered <article> (sanitized user content): the page
     // shell itself legitimately contains a static, enastro-authored
     // <script type="module"> for the id click-to-copy widget (ADR-0009).

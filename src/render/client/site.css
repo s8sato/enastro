@@ -142,15 +142,129 @@ h1 {
 
 article {
   font-size: 1.02rem;
+  /* Slightly dim the body prose relative to full --fg (used for headings,
+     nav, UI chrome) so the contrast against the dark background reads as
+     comfortable rather than glaring. */
+  color: color-mix(in srgb, var(--fg) 90%, var(--bg));
 }
 
 article h1,
-article h2 {
+article h2,
+article h3,
+article h4,
+article h5,
+article h6 {
   font-family: var(--font-display);
+  color: var(--fg);
 }
 
 article :first-child {
   margin-top: 0;
+}
+
+/* Inline code and fenced code blocks: give them a visible background/border
+   so they read as distinct "code" rather than blending into the body text. */
+article code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+}
+
+article pre {
+  margin: 1.25rem 0;
+  padding: 1rem 1.1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  line-height: 1.55;
+}
+
+article pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.88em;
+}
+
+/* highlight.js theme (build-time server-side highlighting, see
+ * src/render/render-note.ts) — colors chosen to sit alongside the
+ * starfield accent/nebula palette rather than a generic hljs theme. */
+.hljs-comment,
+.hljs-quote {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-subst {
+  color: var(--nebula);
+}
+
+.hljs-string,
+.hljs-doctag,
+.hljs-regexp,
+.hljs-addition {
+  color: var(--accent);
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-built_in,
+.hljs-name {
+  color: var(--accent-dim);
+  font-weight: 600;
+}
+
+.hljs-number,
+.hljs-meta,
+.hljs-symbol,
+.hljs-attr {
+  color: var(--nebula-dim);
+}
+
+.hljs-deletion {
+  color: #e2707a;
+}
+
+blockquote {
+  margin: 1.25rem 0;
+  padding: 0.15rem 1.1rem;
+  border-left: 3px solid var(--nebula);
+  color: var(--fg-muted);
+}
+
+blockquote :first-child {
+  margin-top: 0;
+}
+
+blockquote :last-child {
+  margin-bottom: 0;
+}
+
+article table {
+  width: 100%;
+  margin: 1.25rem 0;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+article th,
+article td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+article th {
+  background: var(--bg-elevated);
+  color: var(--fg);
+  font-weight: 600;
 }
 
 /* Note id, styled as a catalog designation plate rather than a raw code
