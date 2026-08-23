@@ -1,0 +1,76 @@
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { buildSite } from "./site.js";
+
+const vaultDir = path.resolve(__dirname, "../../fixtures/compatibility-vault");
+
+let outDir: string;
+
+afterEach(() => {
+  if (outDir) {
+    rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
+describe("buildSite (fixtures/compatibility-vault, REQ-CONTENT-005/008)", () => {
+  it("builds without error and discovers/resolves Japanese and emoji filenames correctly", () => {
+    outDir = mkdtempSync(path.join(tmpdir(), "enastro-compat-"));
+
+    expect(() => buildSite(vaultDir, outDir)).not.toThrow();
+
+    const noteFiles = readdirSync(path.join(outDir, "notes")).sort();
+    expect(noteFiles).toEqual(
+      ["unsupported-syntax.html", "日本語のノート.html", "絵文字-emoji-📘.html"].sort(),
+    );
+
+    const graphJson = JSON.parse(readFileSync(path.join(outDir, "graph.json"), "utf-8")) as {
+      nodes: Array<{ id: string }>;
+    };
+    expect(graphJson.nodes.map((n) => n.id).sort()).toEqual(
+      ["unsupported-syntax", "絵文字-emoji-📘", "日本語のノート"].sort(),
+    );
+  });
+
+  it("resolves the Japanese-named wikilink and generates a backlink on the emoji-named note", () => {
+    outDir = mkdtempSync(path.join(tmpdir(), "enastro-compat-"));
+    buildSite(vaultDir, outDir);
+
+    const jaNote = readFileSync(path.join(outDir, "notes", "日本語のノート.html"), "utf-8");
+    // markdown-it percent-encodes non-ASCII characters in href attributes;
+    // this is standards-compliant and browsers resolve it back to the
+    // literal Unicode filename on disk.
+    expect(jaNote).toContain(
+      '<a href="notes/%E7%B5%B5%E6%96%87%E5%AD%97-emoji-%F0%9F%93%98.html">',
+    );
+
+    const emojiNote = readFileSync(path.join(outDir, "notes", "絵文字-emoji-📘.html"), "utf-8");
+    expect(emojiNote).toContain("Backlinks");
+    expect(emojiNote).toContain('<a href="日本語のノート.html">');
+  });
+
+  it("passes unsupported OFM syntax through unchanged, without failing the build", () => {
+    outDir = mkdtempSync(path.join(tmpdir(), "enastro-compat-"));
+    buildSite(vaultDir, outDir);
+
+    const html = readFileSync(path.join(outDir, "notes", "unsupported-syntax.html"), "utf-8");
+
+    // Callout: renders as a plain blockquote, the `[!note]` marker is not
+    // specially interpreted and remains as literal text.
+    expect(html).toContain("[!note]");
+    expect(html).toContain("<blockquote>");
+
+    // Heading link / block reference: excluded from the wikilink pattern
+    // (target contains `#`), so they remain as literal, unconverted text.
+    expect(html).toContain("[[日本語のノート#heading]]");
+    expect(html).toContain("[[日本語のノート#^blockid]]");
+    expect(html).not.toContain('href="notes/日本語のノート.html#heading"');
+
+    // dataview / canvas-like code blocks: pass through as plain code, with
+    // no special interpretation.
+    expect(html).toContain("LIST FROM #tag");
+    expect(html).toContain('{"nodes": [], "edges": []}');
+    expect(html).not.toMatch(/<script[\s>]/i);
+  });
+});
