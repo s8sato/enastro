@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Keeps npm dependencies (package.json/package-lock.json) patched.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+
+  # Keeps GitHub Actions pinned in .github/workflows/*.yml up to date. Since
+  # actions are pinned to full commit SHAs (supply chain hardening), this is
+  # the mechanism that actually advances those pins over time instead of
+  # them silently going stale.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

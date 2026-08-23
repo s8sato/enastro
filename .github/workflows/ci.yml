@@ -4,16 +4,32 @@ on:
   push:
   pull_request:
 
+# Least-privilege default: this workflow only reads the repo and runs
+# tests, it never needs to write anything (supply chain hardening —
+# GITHUB_TOKEN should never carry more scope than a job actually uses).
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Actions are pinned to a full commit SHA rather than a mutable tag
+      # (e.g. `@v4`), so a compromised/re-pointed upstream tag can't
+      # silently change what code runs in CI. The `# vX.Y.Z` comment
+      # records which released version each SHA corresponds to; Dependabot
+      # (.github/dependabot.yml) keeps these pins up to date.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Verifies npm registry signatures on installed packages (detects
+      # tampered/unsigned packages), independent of the vulnerability
+      # database used by `npm audit` below.
+      - run: npm audit signatures
+      - run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npx playwright install --with-deps chromium
       - run: npm test
