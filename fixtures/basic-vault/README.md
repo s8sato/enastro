@@ -4,7 +4,7 @@
 
 通常の公開フロー（wikilink, backlink, alias/同名ノート衝突, broken link）を検証するための最小 vault。
 
-対応 REQ: REQ-PUB-001, REQ-CONTENT-001〜004, REQ-CONTENT-006, REQ-CONTENT-007, REQ-GRAPH-002, REQ-GRAPH-003, REQ-BUILD-001, REQ-BUILD-002, REQ-UX-001〜004。
+対応 REQ: REQ-PUB-001, REQ-CONTENT-001〜004, REQ-CONTENT-006, REQ-CONTENT-007, REQ-GRAPH-001〜003, REQ-BUILD-001, REQ-BUILD-002, REQ-UX-001〜004。
 
 ## 想定するノート構成（実装ループで作成）
 
@@ -23,14 +23,18 @@
 ## 現状
 
 `note-a.md`, `note-b.md`, `note-c-alias.md`, `note-d-broken-link.md` を作成済み。
-これらは `src/parser/index.test.ts` の unit test から参照される。
+これらは `src/parser/index.test.ts`（frontmatter/wikilink/embed/tag 抽出）と
+`src/graph/build.test.ts`（node/edge/backlink 構築）の unit test から参照される。
 
 `enastro.config.*` は未作成（publish selection を扱う次ループ以降で追加する）。
 
 alias とタイトルの衝突（`note-c-alias.md` の `aliases: [note-b]` と `note-b.md` の
-タイトルの衝突、REQ-CONTENT-006）について、解決規則自体はまだ実装していない
-（parser は wikilink/alias をそのまま抽出するのみで、名前解決は Graph IR 構築ループの
-対象）。提案する優先順位は次の通り: **候補A（タイトル一致を alias 一致より優先）**。
-理由は、タイトルが vault 内での一意な識別子であるべきで、alias による上書きを許すと
-衝突時の挙動が直感に反するため。この提案はユーザー承認待ちであり、承認後に
-`spec/02-content-semantics.md` §2.2 と `REQ-CONTENT-006` の Status を更新する。
+タイトルの衝突、REQ-CONTENT-006）は **候補A（タイトル一致を alias 一致より優先）**
+で DECIDED 済み（[spec/02-content-semantics.md](../../spec/02-content-semantics.md) §2.2）。
+`src/graph/resolve.ts` の `resolveTarget` がこの規則で `[[note-b]]` を常に
+`note-b.md` に解決することを `src/graph/build.test.ts` で検証している。
+
+Graph IR の node/edge/backlink 構築（REQ-GRAPH-001〜003）と broken link の非致命的な
+扱い（REQ-CONTENT-007）は `src/graph/**` で実装済み。publish selection・privacy
+projection（REQ-PUB-001〜005）・artifact 生成（REQ-BUILD-001/002, REQ-UX-001〜004）は
+未実装であり、次ループ以降の対象。
