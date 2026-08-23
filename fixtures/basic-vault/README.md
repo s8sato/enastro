@@ -70,3 +70,12 @@ REQ-CONTENT-007, REQ-UX-003/004）。検証内容:
 `fetch("search-index.json")` はブラウザの `file://` プロトコルでは CORS 制限に
 より動作しないため、静的 HTTP サーバ経由での配信を前提とする。CLI（`bin/enastro.mjs`）
 は最小実装済み。
+
+REQ-UX-001/002/003 は spec/09-acceptance-and-evaluation.md §2.5 が求める
+「unit test + 最小限の browser E2E test」のうち、browser E2E test も実装済み
+（`src/e2e/search-ui.e2e.test.ts`）。この vault を `buildSite()` でビルドし、
+`src/e2e/static-server.ts`（依存なしの自作最小静的サーバ）で配信、Playwright
+（devDependency、`chromium.launch()` を vitest から直接呼ぶプログラム的API）で
+実ブラウザを操作し、検索ボックスによる絞り込み・タグ AND フィルタ・backlink
+リンクのクリック遷移を検証する。ブラウザバイナリの取得には
+`npx playwright install chromium` が必要（初回のみ）。
