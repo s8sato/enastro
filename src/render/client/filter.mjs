@@ -16,15 +16,18 @@
  *   selected tags.
  */
 export function filterEntries(entries, query, selectedTags) {
-  const normalizedQuery = query.trim().toLowerCase();
+  // The query is split on whitespace into individual terms, each of which
+  // must appear *somewhere* in the entry (AND semantics, mirroring the tag
+  // checkboxes below) rather than requiring the whole query to appear as
+  // one contiguous substring. This lets queries like "note-a example" or
+  // "This links" match a note whose id/title/tags/text collectively (but
+  // not contiguously) contain those terms.
+  const queryTerms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
 
   return entries
     .filter((entry) => {
-      const matchesQuery =
-        normalizedQuery === "" ||
-        entry.id.toLowerCase().includes(normalizedQuery) ||
-        entry.title.toLowerCase().includes(normalizedQuery) ||
-        entry.text.toLowerCase().includes(normalizedQuery);
+      const haystack = [entry.id, entry.title, ...entry.tags, entry.text].join(" ").toLowerCase();
+      const matchesQuery = queryTerms.every((term) => haystack.includes(term));
       const matchesTags = selectedTags.every((tag) => entry.tags.includes(tag));
       return matchesQuery && matchesTags;
     })
