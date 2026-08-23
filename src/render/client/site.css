@@ -1,80 +1,227 @@
-/* enastro static site stylesheet — dark "starfield" theme.
+/* enastro static site stylesheet — "starfield catalog" theme.
  * Applies to both the note view (index.html / notes/*.html) and the Graph UI
  * (graph.html, REQ-UX-009/010). Kept as a single small stylesheet (no build
- * step) to preserve the "portable static artifact" requirement (REQ-UX-004).
+ * step, no external font/asset requests) to preserve the "portable static
+ * artifact" requirement (REQ-UX-004). Background is a flat solid color so
+ * it never competes visually with the Graph UI's own rendered content.
+ *
+ * Design language: enastro publishes a personal knowledge graph, so the
+ * visual vocabulary borrows from star catalogs and celestial cartography —
+ * every note is treated like a catalog entry, and the note's content-hash
+ * id is set as a "designation" rather than a raw code string.
  */
 
 :root {
   color-scheme: dark;
-  --bg: #05060f;
-  --bg-elevated: #0c0f1f;
-  --fg: #e7e9f5;
-  --fg-muted: #9aa0c0;
-  --accent: #7dd3fc;
-  --accent-strong: #a78bfa;
-  --border: #1f2440;
+
+  /* --- Color: deep-space navy base, warm starlight gold as the one loud
+     accent, a dimmer nebula violet reserved for secondary/graph moments. --- */
+  --bg: #06071a;
+  --bg-elevated: #0d0f26;
+  --bg-card: #10122c;
+  --fg: #eae8f2;
+  --fg-muted: #8b8fb0;
+  --accent: #f2c879;        /* starlight gold — links, headings, focus */
+  --accent-dim: #c9a45f;    /* hover/active state for accent */
+  --nebula: #9d8cf2;        /* secondary — tags, graph UI, backlinks */
+  --nebula-dim: #7b6bd6;
+  --border: #1d2044;
+  --border-soft: #171a38;
+
+  --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius: 0.5rem;
+  --transition: 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition: 0ms;
+  }
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scrollbar-color: var(--border) var(--bg);
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(ellipse at top, #10142b 0%, var(--bg) 70%);
   color: var(--fg);
   font-family: var(--font-sans);
-  line-height: 1.6;
+  font-size: 1rem;
+  line-height: 1.65;
+
+  background-color: var(--bg);
 }
 
 a {
   color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: color var(--transition);
 }
 
 a:hover {
-  color: var(--accent-strong);
+  color: var(--accent-dim);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 nav {
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1.25rem;
   border-bottom: 1px solid var(--border);
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+nav a {
+  text-decoration: none;
+  color: var(--fg-muted);
+}
+
+nav a:hover {
+  color: var(--accent);
+}
+
+/* index.html renders h1 / #search-box / #tag-filters / #no-results /
+   #note-list directly as children of <body> — there's no wrapping
+   <main>/.page the way note pages have <article>. Give the body itself
+   the side padding, and pull the nav bar back out so it stays a
+   full-bleed bar instead of getting inset along with the content. */
+body:has(#note-list) {
+  padding-inline: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+body:has(#note-list) > nav {
+  margin-inline: -1.25rem;
+}
+
+body:has(#note-list) > h1 {
+  margin-top: 1.75rem;
+}
+
+body:has(#note-list) > #tag-filters,
+body:has(#note-list) > #no-results,
+body:has(#note-list) > #note-list {
+  max-width: 72rem;
 }
 
 main,
 article,
 .page {
-  max-width: 48rem;
+  max-width: 42rem;
   margin: 0 auto;
-  padding: 1rem 1.25rem 3rem;
+  padding: 1.5rem 1.25rem 6rem;
 }
 
 h1 {
-  font-size: 1.6rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.6rem, 1.3rem + 1.2vw, 2.2rem);
+  letter-spacing: -0.01em;
+  margin: 0 0 0.3rem;
 }
 
+article {
+  font-size: 1.02rem;
+}
+
+article h1,
+article h2 {
+  font-family: var(--font-display);
+}
+
+article :first-child {
+  margin-top: 0;
+}
+
+/* Note id, styled as a catalog designation plate rather than a raw code
+   string — bracket ornaments via generated content, wide tracking, small
+   caps rhythm. */
 .note-id {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   font-family: var(--font-mono);
   color: var(--fg-muted);
   font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  margin: 1.25rem auto 0;
+  max-width: 42rem;
+  padding: 0 1.25rem;
+}
+
+.note-id code {
+  color: var(--nebula);
+}
+
+.note-id code::before {
+  content: "⟨ ";
+  color: var(--border);
+}
+
+.note-id code::after {
+  content: " ⟩";
+  color: var(--border);
 }
 
 .copy-id {
-  background: var(--bg-elevated);
-  color: var(--fg);
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  background-color: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 0.3rem;
-  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius);
   cursor: pointer;
+  font-size: 0; /* hides the literal "Copy ID" label visually only —
+                   it stays in the DOM as the button's accessible name */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b8fb0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='12' height='12' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0.85rem;
+  transition: border-color var(--transition);
+}
+
+.copy-id:hover {
+  border-color: var(--accent-dim);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f2c879' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='12' height='12' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+}
+
+.copy-id-feedback {
+  font-size: 0.78rem;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.copy-id-feedback.visible {
+  opacity: 1;
 }
 
 .modified {
   color: var(--fg-muted);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  max-width: 42rem;
+  margin: 0.35rem auto 0;
+  padding: 0 1.25rem;
 }
 
 ul.tags {
@@ -82,24 +229,55 @@ ul.tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding: 0;
-  margin: 0.75rem 0;
+  padding: 0 1.25rem;
+  margin: 1rem auto 0;
+  max-width: 42rem;
 }
 
 ul.tags li a {
   display: inline-block;
-  padding: 0.15rem 0.6rem;
+  padding: 0.15rem 0.65rem;
   border-radius: 999px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--nebula) 14%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--nebula) 35%, var(--border));
+  color: var(--nebula);
   text-decoration: none;
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  transition: border-color var(--transition), color var(--transition);
+}
+
+ul.tags li a:hover {
+  color: var(--fg);
+  border-color: var(--nebula);
 }
 
 .backlinks {
-  margin-top: 2rem;
+  max-width: 42rem;
+  margin: 2.5rem auto 0;
+  padding: 1.25rem 1.25rem 6rem;
   border-top: 1px solid var(--border);
-  padding-top: 1rem;
+}
+
+.backlinks h2 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-muted);
+  font-weight: 500;
+}
+
+.backlinks ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.backlinks li::before {
+  content: "→ ";
+  color: var(--nebula);
 }
 
 span.broken-link {
@@ -107,36 +285,117 @@ span.broken-link {
   text-decoration: line-through dotted;
 }
 
+/* --- Index page --- */
+
 #search-box {
   width: 100%;
   max-width: 32rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.9rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 0.4rem;
+  border-radius: var(--radius);
   color: var(--fg);
   font-size: 1rem;
+  transition: border-color var(--transition);
+}
+
+#search-box::placeholder {
+  color: var(--fg-muted);
+}
+
+#search-box:focus-visible {
+  border-color: var(--accent-dim);
 }
 
 #tag-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin: 0.75rem 0;
+  margin: 0.85rem 0;
+}
+
+/* search.mjs populates #tag-filters client-side with clickable tag
+   toggles; style whatever it inserts (button or a) as a pill chip
+   matching the tag style on note pages, and give it a visible "active"
+   state for whichever attribute/class search.mjs marks selection with. */
+#tag-filters button,
+#tag-filters a {
+  display: inline-block;
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--nebula) 14%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--nebula) 35%, var(--border));
+  color: var(--nebula);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+
+#tag-filters button:hover,
+#tag-filters a:hover {
+  color: var(--fg);
+  border-color: var(--nebula);
+}
+
+#tag-filters [aria-pressed="true"],
+#tag-filters .active,
+#tag-filters .selected {
+  background: var(--nebula);
+  color: var(--bg);
+  border-color: var(--nebula);
+}
+
+#no-results {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
 }
 
 #note-list {
   list-style: none;
   padding: 0;
+  margin-top: 1.25rem;
   display: grid;
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 0.6rem;
 }
 
 #note-list li {
-  padding: 0.6rem 0.8rem;
+  position: relative;
+  padding: 0.75rem 0.9rem 0.75rem 1.6rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  transition: border-color var(--transition), background var(--transition);
+}
+
+#note-list li::before {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  top: 1.15rem;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 5px 1px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+#note-list li:hover {
+  border-color: var(--border);
   background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
+}
+
+#note-list a {
+  color: var(--fg);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+}
+
+#note-list a:hover {
+  color: var(--accent);
 }
 
 /* Graph UI (graph.html, REQ-UX-009/010) shell — full-viewport canvas host
@@ -155,8 +414,9 @@ span.broken-link {
   left: 0;
   right: 0;
   z-index: 2;
-  background: rgba(5, 6, 15, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(6, 7, 26, 0.75);
+  backdrop-filter: blur(6px);
+  border-bottom-color: var(--border-soft);
 }
 
 #graph-canvas-container {
@@ -167,15 +427,17 @@ span.broken-link {
 
 .graph-status {
   position: absolute;
-  bottom: 0.75rem;
-  left: 0.75rem;
+  bottom: 0.85rem;
+  left: 0.85rem;
   z-index: 2;
   margin: 0;
-  padding: 0.4rem 0.7rem;
-  background: rgba(5, 6, 15, 0.7);
-  border-radius: 0.4rem;
-  font-size: 0.85rem;
-  color: var(--fg-muted, #9aa5c2);
+  padding: 0.45rem 0.75rem;
+  background: rgba(6, 7, 26, 0.75);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--fg-muted);
 }
 
 .graph-status:empty {
@@ -186,10 +448,39 @@ span.broken-link {
   main,
   article,
   .page {
-    padding: 0.75rem 1rem 2rem;
+    padding: 1.1rem 1rem 4rem;
+  }
+
+  .note-id,
+  .modified,
+  ul.tags {
+    padding: 0 1rem;
   }
 
   #search-box {
     font-size: 0.95rem;
+  }
+
+  #note-list {
+    grid-template-columns: 1fr;
+  }
+
+  nav {
+    padding: 0.7rem 1rem;
+    font-size: 0.78rem;
+  }
+
+  body:has(#note-list) {
+    padding-inline: 1rem;
+  }
+
+  body:has(#note-list) > nav {
+    margin-inline: -1rem;
+  }
+}
+
+@media (max-width: 26rem) {
+  h1 {
+    font-size: 1.5rem;
   }
 }

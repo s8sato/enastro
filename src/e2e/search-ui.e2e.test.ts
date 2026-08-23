@@ -39,7 +39,7 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
   it("filters the note list via the search box (REQ-UX-001)", async () => {
     await page.goto(`${baseUrl}/index.html`);
 
-    await page.waitForSelector("#tag-filters input");
+    await page.waitForSelector("#tag-filters button");
 
     // Query text unique to note-a's own body: since inline wikilinks now
     // render with the target note's title as their label (ADR-0009), a
@@ -60,9 +60,9 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
 
   it("filters the note list via AND tag selection (REQ-UX-002)", async () => {
     await page.goto(`${baseUrl}/index.html`);
-    await page.waitForSelector("#tag-filters input");
+    await page.waitForSelector("#tag-filters button");
 
-    await page.check('#tag-filters input[value="example"]');
+    await page.click('#tag-filters button[data-tag="example"]');
 
     await expect
       .poll(() => page.locator('li[data-id="note-a"]').isVisible())
@@ -102,10 +102,10 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
     await page.click('a[href="../index.html?tags=example"]');
 
     await expect.poll(() => page.url()).toContain("/index.html?tags=example");
-    await page.waitForSelector("#tag-filters input");
+    await page.waitForSelector("#tag-filters button");
     await expect
-      .poll(() => page.locator('#tag-filters input[value="example"]').isChecked())
-      .toBe(true);
+      .poll(() => page.locator('#tag-filters button[data-tag="example"]').getAttribute("aria-pressed"))
+      .toBe("true");
     await expect
       .poll(() => page.locator('li[data-id="note-a"]').isVisible())
       .toBe(true);

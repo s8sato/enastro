@@ -45,7 +45,7 @@ export function renderNotePage(params: RenderNotePageParams): string {
 </head>
 <body>
 <nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a></nav>
-<p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button></p>
+<p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span></p>
 <p class="modified" data-modified="${modifiedAtEpochMs}">Last modified: ${escapeHtml(modifiedAt)}</p>
 ${tagsHtml}
 <article>${bodyHtml}</article>
@@ -109,7 +109,7 @@ export function renderGraphPage(): string {
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body class="graph-shell">
-<nav><a href="index.html">All notes</a> <a href="graph.html">Graph view</a></nav>
+<nav><a href="index.html">All notes</a></nav>
 <div id="graph-canvas-container"></div>
 <p id="graph-status" class="graph-status" role="status"></p>
 <script type="module" src="assets/graph-view.mjs"></script>

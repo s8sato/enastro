@@ -25,18 +25,20 @@ async function main() {
   const allTags = [...new Set(entries.flatMap((entry) => entry.tags))].sort();
 
   for (const tag of allTags) {
-    const label = document.createElement("label");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = tag;
-    checkbox.addEventListener("change", update);
-    label.appendChild(checkbox);
-    label.append(` #${tag}`);
-    tagFilters.appendChild(label);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.tag = tag;
+    button.setAttribute("aria-pressed", "false");
+    button.textContent = `#${tag}`;
+    button.addEventListener("click", () => {
+      button.setAttribute("aria-pressed", button.getAttribute("aria-pressed") === "true" ? "false" : "true");
+      update();
+    });
+    tagFilters.appendChild(button);
   }
 
   function selectedTags() {
-    return [...tagFilters.querySelectorAll("input:checked")].map((checkbox) => checkbox.value);
+    return [...tagFilters.querySelectorAll('[aria-pressed="true"]')].map((button) => button.dataset.tag);
   }
 
   function update() {
@@ -63,9 +65,9 @@ async function main() {
   // error, since there is no checkbox to check for them.
   const requestedTags = new URLSearchParams(location.search).getAll("tags");
   for (const tag of requestedTags) {
-    const checkbox = tagFilters.querySelector(`input[value="${CSS.escape(tag)}"]`);
-    if (checkbox) {
-      checkbox.checked = true;
+    const button = tagFilters.querySelector(`[data-tag="${CSS.escape(tag)}"]`);
+    if (button) {
+      button.setAttribute("aria-pressed", "true");
     }
   }
   update();

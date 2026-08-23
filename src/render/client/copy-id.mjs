@@ -29,8 +29,19 @@ function copyText(text) {
 
 function main() {
   for (const button of document.querySelectorAll("[data-copy]")) {
+    const feedback = button.parentElement?.querySelector(".copy-id-feedback");
+    let clearTimer;
     button.addEventListener("click", () => {
-      copyText(button.dataset.copy ?? "");
+      copyText(button.dataset.copy ?? "").then(() => {
+        if (!feedback) return;
+        feedback.textContent = "Copied!";
+        feedback.classList.add("visible");
+        clearTimeout(clearTimer);
+        clearTimer = setTimeout(() => {
+          feedback.textContent = "";
+          feedback.classList.remove("visible");
+        }, 1500);
+      });
     });
   }
 }

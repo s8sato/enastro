@@ -19,10 +19,16 @@
  */
 import * as PIXI from "./pixi.min.mjs";
 
-const ACCENT = 0x7dd3fc;
-const ACCENT_STRONG = 0xa78bfa;
-const EDGE_COLOR = 0x2a2f55;
-const PARTICLE_COLOR = 0xe7e9f5;
+// Color palette mirrors site.css's design tokens (`--accent`, `--nebula`,
+// `--border`, `--fg`) so the Graph UI feels visually continuous with the
+// rest of the site rather than using its own unrelated cyan/violet pair.
+// graph-view.mjs is a standalone module (no CSS variable access at
+// runtime), so the values are duplicated here as plain hex literals.
+const ACCENT = 0xf2c879; // starlight gold, matches --accent
+const EDGE_COLOR = 0x1d2044; // matches --border
+const PARTICLE_COLOR = 0xeae8f2; // matches --fg
+const LABEL_PRIMARY_COLOR = 0xeae8f2; // matches --fg, achromatic (no accent hue)
+const LABEL_NEIGHBOR_COLOR = 0x8b8fb0; // matches --fg-muted, achromatic
 
 const MIN_NODE_RADIUS = 3;
 const MAX_NODE_RADIUS = 10;
@@ -68,10 +74,13 @@ async function main() {
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
 
   const degreeById = new Map(graph.nodes.map((node) => [node.id, 0]));
+  const neighborsById = new Map(graph.nodes.map((node) => [node.id, new Set()]));
   for (const edge of graph.edges) {
     if (!nodeById.has(edge.source) || !nodeById.has(edge.target)) continue;
     degreeById.set(edge.source, (degreeById.get(edge.source) ?? 0) + 1);
     degreeById.set(edge.target, (degreeById.get(edge.target) ?? 0) + 1);
+    neighborsById.get(edge.source).add(edge.target);
+    neighborsById.get(edge.target).add(edge.source);
   }
   const maxDegree = Math.max(1, ...degreeById.values());
 
@@ -88,6 +97,14 @@ async function main() {
     edgesLayer.moveTo(source.x, source.y).lineTo(target.x, target.y);
   }
   edgesLayer.stroke({ width: 1, color: EDGE_COLOR, alpha: 0.5 });
+
+  // Redrawn on hover only, to highlight the edges connected to the hovered
+  // node (REQ-UX-009's "adjacent nodes/edges should stand out" feedback).
+  // Highlighting is thickness-only — same hue as the normal edges — so the
+  // effect reads as "these edges matter right now" without recoloring or
+  // otherwise changing the graph's palette.
+  const highlightEdgesLayer = new PIXI.Graphics();
+  world.addChild(highlightEdgesLayer);
 
   // One energy particle per edge, animated from source -> target (the
   // wikilink/embed direction) and looping.
@@ -112,28 +129,128 @@ async function main() {
 
   const nodesLayer = new PIXI.Container();
   world.addChild(nodesLayer);
+  const starById = new Map();
   for (const node of graph.nodes) {
     const degree = degreeById.get(node.id) ?? 0;
     const radius = MIN_NODE_RADIUS + (MAX_NODE_RADIUS - MIN_NODE_RADIUS) * Math.sqrt(degree / maxDegree);
-    const color = degree > maxDegree * 0.5 ? ACCENT_STRONG : ACCENT;
 
-    const star = new PIXI.Graphics().circle(0, 0, radius).fill({ color, alpha: 0.95 });
+    const star = new PIXI.Graphics().circle(0, 0, radius).fill({ color: ACCENT, alpha: 0.95 });
     star.x = node.x;
     star.y = node.y;
     star.eventMode = "static";
     star.cursor = "pointer";
+    nodesLayer.addChild(star);
+    starById.set(node.id, star);
+  }
+
+  // Hover titles are rendered as floating labels next to each relevant node
+  // (rather than aggregated in the bottom-left status bar), in screen space
+  // (a sibling of `world`, not a child of it) so their font size stays
+  // constant regardless of the current pan/zoom level.
+  const labelsLayer = new PIXI.Container();
+  app.stage.addChild(labelsLayer);
+  const labelByNodeId = new Map();
+  // Hub nodes can have dozens of neighbors; showing a label for every one of
+  // them at once is unreadable, so only the most-connected neighbors get a
+  // label (REQ-UX-009 hover feedback should stay legible even for hubs).
+  const MAX_NEIGHBOR_LABELS = 10;
+
+  function nodeScreenPosition(node) {
+    return { x: world.position.x + node.x * world.scale.x, y: world.position.y + node.y * world.scale.y };
+  }
+
+  function nodeRadius(node) {
+    return MIN_NODE_RADIUS + (MAX_NODE_RADIUS - MIN_NODE_RADIUS) * Math.sqrt((degreeById.get(node.id) ?? 0) / maxDegree);
+  }
+
+  /**
+   * A label is placed on the side of its node facing away from `awayFrom`
+   * (world-space coordinates), so neighbor labels fan outward from the
+   * hovered hub instead of all converging toward it and overlapping.
+   */
+  function showLabel(node, { primary, awayFrom }) {
+    if (labelByNodeId.has(node.id)) return;
+
+    const dirX = awayFrom ? node.x - awayFrom.x : 1;
+    const facingLeft = dirX < 0;
+
+    const text = new PIXI.Text({
+      text: node.title,
+      style: {
+        fontFamily: "system-ui, sans-serif",
+        fontSize: primary ? 13 : 11,
+        fontWeight: primary ? "700" : "400",
+        fill: primary ? LABEL_PRIMARY_COLOR : LABEL_NEIGHBOR_COLOR,
+      },
+    });
+    text.anchor.set(facingLeft ? 1 : 0, 0.5);
+
+    // A translucent backing board so the label stays legible when it
+    // overlaps an edge, particle, or another node.
+    const padding = { x: 5, y: 2 };
+    const board = new PIXI.Graphics();
+    const bounds = text.getLocalBounds();
+    board
+      .roundRect(bounds.x - padding.x, bounds.y - padding.y, bounds.width + padding.x * 2, bounds.height + padding.y * 2, 4)
+      .fill({ color: 0x06071a, alpha: 0.72 });
+
+    const container = new PIXI.Container();
+    container.addChild(board, text);
+    container.eventMode = "none";
+    labelsLayer.addChild(container);
+    labelByNodeId.set(node.id, { node, container, facingLeft });
+    repositionLabels();
+  }
+
+  function hideLabel(nodeId) {
+    const entry = labelByNodeId.get(nodeId);
+    if (!entry) return;
+    labelsLayer.removeChild(entry.container);
+    entry.container.destroy({ children: true });
+    labelByNodeId.delete(nodeId);
+  }
+
+  function repositionLabels() {
+    for (const { node, container, facingLeft } of labelByNodeId.values()) {
+      const screenPos = nodeScreenPosition(node);
+      const offset = (nodeRadius(node) * world.scale.x + 6) * (facingLeft ? -1 : 1);
+      container.x = screenPos.x + offset;
+      container.y = screenPos.y;
+    }
+  }
+  app.ticker.add(() => {
+    if (labelByNodeId.size > 0) repositionLabels();
+  });
+
+  for (const node of graph.nodes) {
+    const star = starById.get(node.id);
+    const neighborIds = [...(neighborsById.get(node.id) ?? [])]
+      .sort((a, b) => (degreeById.get(b) ?? 0) - (degreeById.get(a) ?? 0))
+      .slice(0, MAX_NEIGHBOR_LABELS);
+
     star.on("pointerover", () => {
-      star.scale.set(1.6);
-      if (status) status.textContent = node.title;
+      showLabel(node, { primary: true });
+
+      highlightEdgesLayer.clear();
+      for (const neighborId of neighborIds) {
+        const neighborStar = starById.get(neighborId);
+        const neighborNode = nodeById.get(neighborId);
+        if (!neighborStar || !neighborNode) continue;
+        showLabel(neighborNode, { primary: false, awayFrom: node });
+        highlightEdgesLayer.moveTo(node.x, node.y).lineTo(neighborStar.x, neighborStar.y);
+      }
+      highlightEdgesLayer.stroke({ width: 3, color: EDGE_COLOR, alpha: 0.9 });
     });
     star.on("pointerout", () => {
-      star.scale.set(1);
-      if (status) status.textContent = "";
+      hideLabel(node.id);
+      for (const neighborId of neighborIds) {
+        hideLabel(neighborId);
+      }
+      highlightEdgesLayer.clear();
     });
     star.on("pointertap", () => {
       window.location.href = `notes/${encodeURIComponent(node.id)}.html`;
     });
-    nodesLayer.addChild(star);
   }
 
   /** Maps a screen-space point (canvas-relative) to a point in `world` space. */
