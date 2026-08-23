@@ -1,0 +1,195 @@
+/* enastro static site stylesheet — dark "starfield" theme.
+ * Applies to both the note view (index.html / notes/*.html) and the Graph UI
+ * (graph.html, REQ-UX-009/010). Kept as a single small stylesheet (no build
+ * step) to preserve the "portable static artifact" requirement (REQ-UX-004).
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #05060f;
+  --bg-elevated: #0c0f1f;
+  --fg: #e7e9f5;
+  --fg-muted: #9aa0c0;
+  --accent: #7dd3fc;
+  --accent-strong: #a78bfa;
+  --border: #1f2440;
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top, #10142b 0%, var(--bg) 70%);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--accent-strong);
+}
+
+nav {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 1rem;
+}
+
+main,
+article,
+.page {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 3rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+}
+
+.note-id {
+  font-family: var(--font-mono);
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+}
+
+.copy-id {
+  background: var(--bg-elevated);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  cursor: pointer;
+}
+
+.modified {
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+}
+
+ul.tags {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+
+ul.tags li a {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.backlinks {
+  margin-top: 2rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+span.broken-link {
+  color: var(--fg-muted);
+  text-decoration: line-through dotted;
+}
+
+#search-box {
+  width: 100%;
+  max-width: 32rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  color: var(--fg);
+  font-size: 1rem;
+}
+
+#tag-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+}
+
+#note-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+#note-list li {
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+/* Graph UI (graph.html, REQ-UX-009/010) shell — full-viewport canvas host
+ * with a floating nav bar so the WebGL renderer can size to the whole
+ * screen while still being reachable from/to the note view. */
+.graph-shell {
+  position: fixed;
+  inset: 0;
+  padding: 0;
+  max-width: none;
+}
+
+.graph-shell nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  background: rgba(5, 6, 15, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+#graph-canvas-container {
+  position: absolute;
+  inset: 0;
+  touch-action: none; /* renderer owns pan/zoom/pinch gestures (REQ-UX-010) */
+}
+
+.graph-status {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  z-index: 2;
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  background: rgba(5, 6, 15, 0.7);
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--fg-muted, #9aa5c2);
+}
+
+.graph-status:empty {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  main,
+  article,
+  .page {
+    padding: 0.75rem 1rem 2rem;
+  }
+
+  #search-box {
+    font-size: 0.95rem;
+  }
+}

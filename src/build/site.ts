@@ -1,11 +1,13 @@
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildGraph } from "../graph/build.js";
 import { computeBacklinks } from "../graph/backlinks.js";
+import { computeGraphLayout } from "../graph/layout.js";
 import { buildPublicProjection } from "../projection/build.js";
 import type { PublicNode } from "../projection/types.js";
-import { renderIndexPage, renderNoteBody, renderNotePage } from "../render/index.js";
+import { renderGraphPage, renderIndexPage, renderNoteBody, renderNotePage } from "../render/index.js";
 import { formatTimestamp } from "../render/format-timestamp.js";
 import { loadVaultConfig } from "../vault/config.js";
 import { discoverAttachments } from "../vault/discover-attachments.js";
@@ -22,7 +24,19 @@ const CLIENT_ASSET_FILENAMES = [
   "copy-id.mjs",
   "format-local-time.mjs",
   "local-time.mjs",
+  "site.css",
+  "graph-view.mjs",
 ];
+
+// pixi.js (WebGL renderer, ADR-0010) is vendored as a single self-contained
+// ESM bundle rather than added to any bundler pipeline (this project has
+// none, by design — REQ-UX-004's portable-static-artifact requirement). Its
+// package.json `exports` map doesn't expose `dist/*` subpaths directly, so
+// the package root is located via its main entry point instead.
+const require = createRequire(import.meta.url);
+const PIXI_PACKAGE_ROOT = path.dirname(path.dirname(require.resolve("pixi.js")));
+const PIXI_VENDOR_SOURCE_PATH = path.join(PIXI_PACKAGE_ROOT, "dist", "pixi.min.mjs");
+const PIXI_VENDOR_FILENAME = "pixi.min.mjs";
 
 export interface BuildSiteResult {
   /** Human-readable warnings (e.g. edges dropped because the target was
@@ -68,6 +82,7 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
   for (const filename of CLIENT_ASSET_FILENAMES) {
     copyFileSync(path.join(CLIENT_ASSETS_DIR, filename), path.join(outDir, "assets", filename));
   }
+  copyFileSync(PIXI_VENDOR_SOURCE_PATH, path.join(outDir, "assets", PIXI_VENDOR_FILENAME));
 
   for (const attachmentId of [...publishedAttachmentIds].sort()) {
     const attachment = attachmentById.get(attachmentId)!;
@@ -102,9 +117,20 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
   }
 
   writeFileSync(path.join(outDir, "index.html"), renderIndexPage(sortedNodes), "utf-8");
+  writeFileSync(path.join(outDir, "graph.html"), renderGraphPage(), "utf-8");
+
+  // Layout coordinates are precomputed at build time, over the public
+  // projection only (REQ-PUB-002), via a deterministic force simulation
+  // (ADR-0006, ADR-0010, ADR-0012) so the Graph UI never has to run its own
+  // layout pass in the browser.
+  const layout = computeGraphLayout(sortedNodes, sortedEdges);
+  const graphJsonNodes = sortedNodes.map((node) => {
+    const position = layout.get(node.id) ?? { x: 0, y: 0 };
+    return { ...node, x: position.x, y: position.y };
+  });
   writeFileSync(
     path.join(outDir, "graph.json"),
-    JSON.stringify({ nodes: sortedNodes, edges: sortedEdges }, null, 2),
+    JSON.stringify({ nodes: graphJsonNodes, edges: sortedEdges }, null, 2),
     "utf-8",
   );
   writeFileSync(path.join(outDir, "search-index.json"), JSON.stringify(searchEntries, null, 2), "utf-8");

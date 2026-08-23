@@ -32,8 +32,17 @@ export function validateGraphSchema(value: unknown): GraphSchemaValidationResult
       if (!Array.isArray(n.tags) || !n.tags.every((t) => typeof t === "string")) {
         errors.push(`nodes[${i}].tags must be a string[]`);
       }
+      // Precomputed force-directed layout coordinates (ADR-0006, ADR-0010,
+      // ADR-0012), used by the Graph UI (graph.html) to avoid computing
+      // layout in the browser.
+      if (typeof n.x !== "number" || !Number.isFinite(n.x)) {
+        errors.push(`nodes[${i}].x must be a finite number`);
+      }
+      if (typeof n.y !== "number" || !Number.isFinite(n.y)) {
+        errors.push(`nodes[${i}].y must be a finite number`);
+      }
       for (const key of Object.keys(n)) {
-        if (key !== "id" && key !== "title" && key !== "tags") {
+        if (key !== "id" && key !== "title" && key !== "tags" && key !== "x" && key !== "y") {
           errors.push(`nodes[${i}] has unexpected field "${key}"`);
         }
       }

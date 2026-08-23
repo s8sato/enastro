@@ -39,10 +39,12 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(node.title)}</title>
+<link rel="stylesheet" href="../assets/site.css">
 </head>
 <body>
-<nav><a href="../index.html">All notes</a></nav>
+<nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a></nav>
 <p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button></p>
 <p class="modified" data-modified="${modifiedAtEpochMs}">Last modified: ${escapeHtml(modifiedAt)}</p>
 ${tagsHtml}
@@ -74,15 +76,43 @@ export function renderIndexPage(nodes: PublicNode[]): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>enastro</title>
+<link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
+<nav><a href="graph.html">Graph view</a></nav>
 <h1>Notes</h1>
 <input type="search" id="search-box" placeholder="Search notes...">
 <div id="tag-filters"></div>
 <p id="no-results" hidden>No notes match the current search/filter.</p>
 <ul id="note-list">${items}</ul>
 <script type="module" src="assets/search.mjs"></script>
+</body>
+</html>
+`;
+}
+
+/**
+ * Assembles the Graph UI secondary page (REQ-GRAPH-004/005, REQ-UX-009,
+ * ADR-0010, ADR-0011). No node/edge data is templated in server-side; the
+ * client fetches the already-public `graph.json` at runtime and renders it
+ * with `graph-view.mjs` (WebGL, via a vendored pixi.js build).
+ */
+export function renderGraphPage(): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>enastro · Graph view</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body class="graph-shell">
+<nav><a href="index.html">All notes</a> <a href="graph.html">Graph view</a></nav>
+<div id="graph-canvas-container"></div>
+<p id="graph-status" class="graph-status" role="status"></p>
+<script type="module" src="assets/graph-view.mjs"></script>
 </body>
 </html>
 `;

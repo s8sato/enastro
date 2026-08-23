@@ -66,6 +66,40 @@ describe("buildSite privacy scan (fixtures/privacy-vault)", () => {
     expect(graph.nodes.map((n) => n.id)).not.toContain("private-note");
   });
 
+  it("never exposes the private note's identity via graph.json's layout coordinates or graph.html (REQ-SEC-001, ADR-0010/0012)", () => {
+    outDir = mkdtempSync(path.join(tmpdir(), "enastro-privacy-"));
+    buildSite(vaultDir, outDir);
+
+    const graph = JSON.parse(readFileSync(path.join(outDir, "graph.json"), "utf-8")) as {
+      nodes: Array<{ id: string; x: number; y: number }>;
+      edges: Array<{ source: string; target: string }>;
+    };
+
+    // Layout coordinates are computed over the public projection only, so
+    // the private note must not appear as a node at all (and therefore
+    // cannot have leaked coordinates), and no edge may reference it.
+    expect(graph.nodes.map((n) => n.id)).not.toContain("private-note");
+    for (const edge of graph.edges) {
+      expect(edge.source).not.toBe("private-note");
+      expect(edge.target).not.toBe("private-note");
+    }
+    for (const node of graph.nodes) {
+      expect(Number.isFinite(node.x)).toBe(true);
+      expect(Number.isFinite(node.y)).toBe(true);
+    }
+
+    // graph.html itself templates no node/edge data server-side (it only
+    // wires up a client script that fetches the already-public graph.json),
+    // so it cannot leak anything by construction; asserted here anyway as a
+    // regression guard.
+    const graphHtml = readFileSync(path.join(outDir, "graph.html"), "utf-8");
+    for (const forbidden of FORBIDDEN_STRINGS) {
+      expect(graphHtml).not.toContain(forbidden);
+    }
+    expect(graphHtml).not.toContain("private-note");
+  });
+
+
   it("quietly drops the wikilink and embed pointing to the private note", () => {
     outDir = mkdtempSync(path.join(tmpdir(), "enastro-privacy-"));
     buildSite(vaultDir, outDir);

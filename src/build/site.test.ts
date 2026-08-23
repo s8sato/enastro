@@ -24,7 +24,7 @@ describe("buildSite (fixtures/basic-vault)", () => {
     expect(warnings).toEqual([]);
 
     const topLevel = readdirSync(outDir).sort();
-    expect(topLevel).toEqual(["assets", "graph.json", "index.html", "notes", "search-index.json"]);
+    expect(topLevel).toEqual(["assets", "graph.html", "graph.json", "index.html", "notes", "search-index.json"]);
 
     const noteFiles = readdirSync(path.join(outDir, "notes")).sort();
     expect(noteFiles).toEqual([
@@ -52,7 +52,7 @@ describe("buildSite (fixtures/basic-vault)", () => {
     expect(noteA).toContain('data-copy="note-a"');
     expect(noteA).toContain('<script type="module" src="../assets/copy-id.mjs"></script>');
     // Every note page links back to the index/landing page (REQ-UX-006).
-    expect(noteA).toContain('<nav><a href="../index.html">All notes</a></nav>');
+    expect(noteA).toContain('<nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a></nav>');
     // Every note page shows its last-modified timestamp, formatted in UTC
     // as a deterministic no-JS fallback (REQ-UX-007, REQ-BUILD-001), with the
     // raw epoch ms also present so `local-time.mjs` can progressively
@@ -92,11 +92,12 @@ describe("buildSite (fixtures/basic-vault)", () => {
       "note-d-broken-link",
     ]);
 
-    // graph.json's schema is a closed whitelist (id/title/tags only) and
+    // graph.json's schema is a closed whitelist (id/title/tags plus
+    // precomputed x/y layout coordinates, ADR-0006/0010/0012) and
     // deliberately does NOT carry modifiedAt (see GraphNode.modifiedAt's
     // doc comment); it is only exposed via note pages and search-index.json.
     for (const node of graphJson.nodes) {
-      expect(Object.keys(node).sort()).toEqual(["id", "tags", "title"]);
+      expect(Object.keys(node).sort()).toEqual(["id", "tags", "title", "x", "y"]);
     }
 
     const searchIndex = JSON.parse(readFileSync(path.join(outDir, "search-index.json"), "utf-8"));
