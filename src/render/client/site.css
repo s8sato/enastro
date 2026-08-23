@@ -492,7 +492,7 @@ span.broken-link {
 
 #note-list li {
   position: relative;
-  padding: 0.75rem 0.9rem 0.75rem 1.6rem;
+  padding: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
@@ -509,6 +509,7 @@ span.broken-link {
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 5px 1px color-mix(in srgb, var(--accent) 70%, transparent);
+  pointer-events: none;
 }
 
 #note-list li:hover {
@@ -516,7 +517,12 @@ span.broken-link {
   background: var(--bg-elevated);
 }
 
+/* The whole card (li) is the clickable/tappable area, not just the title
+   text: the link fills the card's full box rather than just wrapping the
+   title string. */
 #note-list a {
+  display: block;
+  padding: 0.75rem 0.9rem 0.75rem 1.6rem;
   color: var(--fg);
   text-decoration: none;
   font-family: var(--font-display);
