@@ -1,0 +1,51 @@
+import type { IOptions } from "sanitize-html";
+
+/**
+ * Explicit allowlist for sanitizing raw HTML found in note bodies
+ * (REQ-SEC-003). Deliberately conservative: only tags/attributes needed for
+ * basic note formatting are allowed. `<script>`, `<svg>`, event handler
+ * attributes (`on*`), and non-http(s)/mailto URI schemes are always
+ * stripped, per the allowlist approach recommended in
+ * spec/08-security-and-privacy.md §3 (OWASP-aligned; avoids a
+ * regex-based denylist).
+ */
+export const SANITIZE_OPTIONS: IOptions = {
+  allowedTags: [
+    "p",
+    "br",
+    "hr",
+    "strong",
+    "b",
+    "em",
+    "i",
+    "u",
+    "s",
+    "code",
+    "pre",
+    "a",
+    "img",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+  ],
+  allowedAttributes: {
+    a: ["href", "title"],
+    img: ["src", "alt", "title", "width", "height"],
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+  allowProtocolRelative: false,
+  disallowedTagsMode: "discard",
+};
