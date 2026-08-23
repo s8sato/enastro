@@ -2,4 +2,5 @@ node_modules/
 dist/
 dist-ts/
 *.log
+dist-demo/
 /fixtures/benchmark-vault/vault/
