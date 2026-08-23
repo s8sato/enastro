@@ -101,9 +101,9 @@ minimal Markdown vault
 | REQ-UX-003 | 出力はノートごとに backlink を表示 **MUST**。 | DECIDED |
 | REQ-UX-004 | 出力は静的ホスティング可能でサーバーサイド runtime 不要な portable artifact である **MUST**。 | DECIDED |
 | REQ-UX-005 | v0.1 の主画面はノート/ドキュメントビューであり、Graph UI は主画面にしない。長期的には Graph UI を主画面に据える方針。 | DECIDED（方向性）/ OPEN（詳細 UX） |
-| REQ-UX-006 | ノートページには一覧ページ（`index.html`）へのナビゲーションリンクを常に表示する **SHOULD**。 | PROPOSED |
-| REQ-UX-007 | ノートページには ID の近くに最終更新日時（ファイルの mtime 由来）を表示し、検索対象に含める **SHOULD**。ビルドの決定性（REQ-BUILD-001）を保つため、静的 HTML には UTC 表示をフォールバックとして埋め込み、閲覧者のブラウザ上で JavaScript により閲覧者のローカルタイムゾーンでの表示に強化する。作成日時は取得元の信頼性の問題（filesystem birthtime の非対応・git checkout によるリセット）から v0.1 では対象外とする。 | PROPOSED |
-| REQ-UX-008 | ノートページの `#tag` はリンクとして表示され、クリックすると一覧ページ（`index.html`）の対応するタグでフィルタされた表示に遷移する **SHOULD**。 | PROPOSED |
+| REQ-UX-006 | ノートページには一覧ページ（`index.html`）へのナビゲーションリンクを常に表示する **SHOULD**。 | DECIDED |
+| REQ-UX-007 | ノートページには ID の近くに最終更新日時（ファイルの mtime 由来）を表示し、検索対象に含める **SHOULD**。ビルドの決定性（REQ-BUILD-001）を保つため、静的 HTML には UTC 表示をフォールバックとして埋め込み、閲覧者のブラウザ上で JavaScript により閲覧者のローカルタイムゾーンでの表示に強化する。作成日時は取得元の信頼性の問題（filesystem birthtime の非対応・git checkout によるリセット）から v0.1 では対象外とする。 | DECIDED |
+| REQ-UX-008 | ノートページの `#tag` はリンクとして表示され、クリックすると一覧ページ（`index.html`）の対応するタグでフィルタされた表示に遷移する **SHOULD**。 | DECIDED |
 
 ### 4.5 SEC
 
@@ -127,16 +127,40 @@ minimal Markdown vault
 |---|---|---|
 | REQ-PERF-001 | 10,000 nodes / 50,000 edges 規模での性能目標（first interactive frame ≤ 1,000ms 等）は v0.1 の対象外。reference environment（hardware / browser / percentile）は未決定。 | DEFERRED / OPEN |
 
-## 5. Traceability 表（抜粋）
+## 5. Traceability 表
 
 | Product goal | Requirement | Architecture / ADR | Acceptance | Fixture |
 |---|---|---|---|---|
 | 00: 一本道の安全な生成 | REQ-PUB-001 | ADR-0001 | 09 §2.1 | fixtures/basic-vault |
+| 00: public projection 経由の生成 | REQ-PUB-002 | ADR-0001 | 09 §2.1 | fixtures/basic-vault |
 | 00: 非公開情報の非漏洩 | REQ-PUB-003, REQ-SEC-001 | ADR-0002 | 09 §2.2 | fixtures/privacy-vault |
+| 00: 非公開 edge 除去時の warning | REQ-PUB-004 | ADR-0002 | 09 §2.2 | fixtures/privacy-vault |
+| 00: 非公開ノートの embed 除去 | REQ-PUB-005 | ADR-0002 | 09 §2.2 | fixtures/privacy-vault |
 | 00: 添付の安全な公開 | REQ-PUB-006, REQ-SEC-002 | ADR-0003 | 09 §2.2 | fixtures/privacy-vault |
 | 00: 公開 repo の攻撃面最小化 | REQ-PUB-007 | ADR-0004 | 09 §2.3 | fixtures/basic-vault (artifact 出力検査) |
-| 00: 決定的 build | REQ-BUILD-001 | ADR-0005 | 09 §2.4 | fixtures/basic-vault (golden hash) |
-| 00: 安全な HTML 取り込み | REQ-SEC-003 | ADR-0002 | 09 §2.2 | fixtures/security-vault |
+| 01: wikilink / alias 解釈 | REQ-CONTENT-001 | (parser 実装) | 09 §2.1 | fixtures/basic-vault |
+| 01: embed 解釈 | REQ-CONTENT-002 | (parser 実装) | 09 §2.1 | fixtures/basic-vault |
+| 01: `#tag` 解釈 | REQ-CONTENT-003 | (parser 実装) | 09 §2.1 | fixtures/basic-vault |
+| 01: frontmatter 解釈 | REQ-CONTENT-004 | (parser 実装) | 09 §2.1 | fixtures/basic-vault |
+| 01: 非対応構文の素通し | REQ-CONTENT-005 | (parser 実装) | 09 §2.1 | fixtures/compatibility-vault |
+| 01: ID 優先の衝突解決 | REQ-CONTENT-006 | ADR-0009 | 09 §2.1 | fixtures/basic-vault |
+| 01: broken link の非致命化 | REQ-CONTENT-007 | (graph/render 実装) | 09 §2.1 | fixtures/basic-vault |
 | 00: 国際化されたファイル名の解決 | REQ-CONTENT-008 | (parser 実装) | 09 §2.1 | fixtures/compatibility-vault |
+| 00: note id/title 分離 | REQ-CONTENT-009 | ADR-0009 | 09 §2.1 | fixtures/basic-vault |
+| 01: Knowledge Graph IR への一元化 | REQ-GRAPH-001 | (graph 実装) | 09 §2.1 | fixtures/basic-vault |
+| 01: wikilink の directed edge 化 | REQ-GRAPH-002 | (graph 実装) | 09 §2.1 | fixtures/basic-vault |
+| 01: backlink 導出 | REQ-GRAPH-003 | (graph 実装) | 09 §2.1 | fixtures/basic-vault |
+| 00: 安全な HTML 取り込み | REQ-SEC-003 | ADR-0002 | 09 §2.2 | fixtures/security-vault |
+| 00: privacy invariant の格下げ禁止 | REQ-SEC-004 | LOOP.md 安全策 | 09 §4 | - |
+| 00: 決定的 build | REQ-BUILD-001 | ADR-0005 | 09 §2.4 | fixtures/basic-vault (golden hash) |
+| 00: artifact schema 検証 | REQ-BUILD-002 | (build 実装、手書きバリデータ) | 09 §2.4 | fixtures/basic-vault |
+| 00: 全文検索 | REQ-UX-001 | (render/build 実装) | 09 §2.5 | fixtures/basic-vault |
+| 00: タグ検索・フィルタリング | REQ-UX-002 | (render/build 実装) | 09 §2.5 | fixtures/basic-vault |
+| 00: backlink 表示 | REQ-UX-003 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
+| 00: portable static artifact | REQ-UX-004 | (build 実装) | 09 §2.5 | fixtures/basic-vault |
+| 00: ノート/ドキュメントビューが主画面 | REQ-UX-005 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
+| 00: 一覧ページへのナビゲーション | REQ-UX-006 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
+| 00: 最終更新日時の表示・検索対象化 | REQ-UX-007 | (render/build 実装) | 09 §2.5 | fixtures/basic-vault |
+| 00: タグのフィルタリンク化 | REQ-UX-008 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
 
-網羅的な表は実装が進むにつれて拡張する。
+DEFERRED な REQ（REQ-PUB-008, REQ-GRAPH-004〜005, REQ-PERF-001 等）は本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。

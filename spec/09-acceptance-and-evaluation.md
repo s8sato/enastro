@@ -59,6 +59,10 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 |---|---|---|
 | REQ-UX-001, 002, 003 | unit test + 最小限の browser E2E test | basic-vault |
 | REQ-UX-004 | golden test（外部依存なしで静的ファイルとして開けること） | basic-vault |
+| REQ-UX-005 | human review（主画面がノート/ドキュメントビューであること） | basic-vault |
+| REQ-UX-006 | unit test（全ノートページに index.html へのナビゲーションリンクが存在すること） | basic-vault |
+| REQ-UX-007 | unit test（mtime の UTC 静的表示・検索対象への包含）+ browser E2E test（JS によるローカルタイムゾーン表示への強化） | basic-vault |
+| REQ-UX-008 | unit test（`#tag` が index.html へのフィルタリンクに変換されること）+ browser E2E test（タグクリックでの遷移） | basic-vault |
 | 美しさ・視覚的品質全般 | human review（自動スコア化しない） | - |
 
 ## 3. v0.1 では実施しない検証 [DEFERRED]
