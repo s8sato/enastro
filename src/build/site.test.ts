@@ -40,7 +40,10 @@ describe("buildSite (fixtures/basic-vault)", () => {
     buildSite(vaultDir, outDir);
 
     const noteA = readFileSync(path.join(outDir, "notes", "note-a.html"), "utf-8");
-    expect(noteA).toContain('<a href="notes/note-b.html">note-b</a>');
+    // The inline wikilink lives inside <article>, alongside its surrounding
+    // prose, to avoid a false-positive match against the (correct)
+    // same-looking href in the unrelated <section class="backlinks"> below.
+    expect(noteA).toContain('This note links to <a href="note-b.html">note-b</a>');
 
     const noteB = readFileSync(path.join(outDir, "notes", "note-b.html"), "utf-8");
     // note-a links to note-b twice, so note-a should appear as a backlink.

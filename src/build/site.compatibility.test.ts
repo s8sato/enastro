@@ -40,9 +40,10 @@ describe("buildSite (fixtures/compatibility-vault, REQ-CONTENT-005/008)", () => 
     const jaNote = readFileSync(path.join(outDir, "notes", "日本語のノート.html"), "utf-8");
     // markdown-it percent-encodes non-ASCII characters in href attributes;
     // this is standards-compliant and browsers resolve it back to the
-    // literal Unicode filename on disk.
+    // literal Unicode filename on disk. The href is relative to the note's
+    // own directory (notes/), so it must NOT be prefixed with "notes/" again.
     expect(jaNote).toContain(
-      '<a href="notes/%E7%B5%B5%E6%96%87%E5%AD%97-emoji-%F0%9F%93%98.html">',
+      '<a href="%E7%B5%B5%E6%96%87%E5%AD%97-emoji-%F0%9F%93%98.html">',
     );
 
     const emojiNote = readFileSync(path.join(outDir, "notes", "絵文字-emoji-📘.html"), "utf-8");

@@ -7,7 +7,7 @@ function graph(nodes: KnowledgeGraph["nodes"]): KnowledgeGraph {
 }
 
 describe("substituteLinks", () => {
-  it("rewrites a resolved public link into a Markdown link to notes/<id>.html", () => {
+  it("rewrites a resolved public link into a Markdown link to <id>.html (same-directory relative path)", () => {
     const g = graph([
       { id: "a", title: "A", aliases: [], tags: [], publish: true, path: "/a.md", body: "" },
       { id: "b", title: "B", aliases: [], tags: [], publish: true, path: "/b.md", body: "" },
@@ -15,7 +15,7 @@ describe("substituteLinks", () => {
 
     const { text, removedTargets } = substituteLinks("See [[B]] for details.", g);
 
-    expect(text).toBe("See [B](notes/b.html) for details.");
+    expect(text).toBe("See [B](b.html) for details.");
     expect(removedTargets).toEqual([]);
   });
 
@@ -27,7 +27,7 @@ describe("substituteLinks", () => {
 
     const { text } = substituteLinks("See [[B|custom label]].", g);
 
-    expect(text).toBe("See [custom label](notes/b.html).");
+    expect(text).toBe("See [custom label](b.html).");
   });
 
   it("deletes an occurrence entirely (including display text) when the target is unpublished", () => {
