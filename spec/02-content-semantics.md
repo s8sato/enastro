@@ -27,15 +27,17 @@ v0.1 では以下の最小セットのみをパーサーが解釈する（REQ-CO
 - `[[note]]` はノートのタイトル（ファイル名から拡張子を除いたもの、または frontmatter の title）と一致するノートに解決する。
 - `[[note|alias]]` は解決先ノートは `note` と同一だが、表示テキストは `alias` を使う。
 
-### 2.2 alias と同名ノートの衝突 [OPEN]
+### 2.2 alias と同名ノートの衝突 [DECIDED]
 
-vault 内で、あるノートの `aliases:` frontmatter が別ノートのタイトルと衝突する場合、どちらを優先して解決するかは未決定（REQ-CONTENT-006）。
+vault 内で、あるノートの `aliases:` frontmatter が別ノートのタイトルと衝突する場合、
+**タイトル一致を alias 一致より優先する**（REQ-CONTENT-006、候補A）。
 
-- 候補 A: タイトル一致を alias 一致より優先する。
-- 候補 B: alias 一致をタイトル一致より優先する。
-- 候補 C: 衝突をエラー扱いにし、build を失敗させる。
-
-`fixtures/basic-vault` にこのケースの fixture を用意し、実装ループで具体的な既定動作を PROPOSED として提示し、承認を得てから DECIDED にする。
+- 理由: タイトルは vault 内での一意な識別子であるべきであり、alias による上書きを
+  許容すると衝突時の解決結果が直感に反するため。
+- 実装: `fixtures/basic-vault/note-c-alias.md` の `aliases: [note-b]` は
+  `note-b.md` のタイトルと衝突するが、`[[note-b]]` は常に `note-b.md` に解決される。
+- 同一の alias 文字列が複数ノート間で衝突する場合（alias 同士の衝突）は本項の対象外
+  であり、別途 OPEN（Graph IR 構築ループで暫定挙動を実装し、必要なら別途 ADR 化する）。
 
 ### 2.3 broken link（存在しないノートへの link）[PROPOSED]
 

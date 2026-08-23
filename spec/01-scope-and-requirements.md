@@ -77,7 +77,7 @@ minimal Markdown vault
 | REQ-CONTENT-003 | パーサーは `#tag` 構文を解釈 **MUST**。 | DECIDED |
 | REQ-CONTENT-004 | パーサーは YAML frontmatter（少なくとも `publish` とタグ相当のフィールド）を解釈 **MUST**。 | DECIDED |
 | REQ-CONTENT-005 | 最小セット外の Obsidian 構文（callout・見出しリンク・block 参照・dataview・canvas 等）は、エラーにせずプレーンテキストとして素通しする **MUST**。 | DECIDED |
-| REQ-CONTENT-006 | alias と同名ノートが衝突する場合の解決優先順位を定義する **MUST**。具体的な優先順位規則は実装ループで提案し承認を得る。 | OPEN |
+| REQ-CONTENT-006 | alias と同名ノートが衝突する場合、タイトル一致を alias 一致より優先して解決する **MUST**（候補A、02-content-semantics.md §2.2 参照）。 | DECIDED |
 | REQ-CONTENT-007 | 存在しないノートへの link（broken link）は build を失敗させず処理される **MUST**。表示方法（プレーンテキスト化 / 破損マーカー等）は UX ループで決定する。 | PROPOSED |
 | REQ-CONTENT-008 | 日本語ファイル名・Unicode を含むノート名を正しく解決 **MUST**。 | DECIDED |
 
