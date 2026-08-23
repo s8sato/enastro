@@ -34,17 +34,17 @@ v0.1 で必要な最小限のフィールドのみを定義する（詳細 schem
 - Node: `id`, `title`, `aliases`, `tags`, `publish`, `path`（公開 artifact には path を含めない）
 - Edge: `source`, `target`, `kind`（`wikilink` | `embed`）, `direction`（directed）
 
-## 4. Graph layout の計算方針 [DEFERRED]
+## 4. Graph layout の計算方針 [DECIDED（v0.2）]
 
-- 将来的には、layout 座標を build 時に事前計算し、実行時にはユーザー操作に応じた物理演算・再配置のみを行うハイブリッド方式を採用する方針（REQ-GRAPH-005）。
-- v0.1 では Graph UI 自体を実装しないため、この方針は設計メモとして記録するのみで実装しない。
+- layout 座標を build 時に事前計算し、実行時にはユーザー操作に応じた物理演算・再配置のみを行うハイブリッド方式を v0.2 で実装する（REQ-GRAPH-005）。
+- 事前計算には `d3-force` を用いる。public projection（REQ-PUB-002）のグラフのみを入力とし、坐標を `graph.json` に烘き込む（[05-artifact-contracts.md](05-artifact-contracts.md) 改訂対象、[ADR-0006](../decisions/ADR-0006-graph-layout-precomputation-strategy.md), [ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md) 参照）。
 
 ## 5. Rendering / distribution [DECIDED]
 
 - 出力は静的ファイル一式であり、サーバーサイド runtime を必要としない（REQ-UX-004）。
-- D3/SVG を中心にした graph レンダラーは既定路線とせず、v0.1 以降に着手する際に WebGL 系 renderer を含めて再評価する（設計原則: 技術選定は既定路線としない）。
+- Graph UI の描画には WebGL 系ライブラリ（pixi.js）を v0.2 で新規導入する（[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md)）。IR を生成するモジュール（graph 層）と、IR を消費して rendering を行うモジュール（render 層の client 側）の境界は引き続き明確に保つ。
 
 ## 6. 未決事項 [OPEN]
 
-- Graph IR の永続化フォーマット（JSON か、より効率的なバイナリか）は、Graph UI 着手時に性能要件と合わせて再検討する。
-- Rust/WASM への移行タイミングとトリガー条件（性能未達の具体的閾値）は未定。
+- Graph IR の永続化フォーマット（JSON か、より効率的なバイナリか）は v0.2 の実装結果（fixtures/benchmark-vault での計測）を踏まえて後継ループで再検討する。
+- Rust/WASM への移行タイミングとトリガー条件（性能未達の具体的閾値）は未定。ADR-0012 の目標を大幅に下回る場合の検討材料とする。

@@ -37,6 +37,9 @@ Evidence to report:   完了報告に含める証跡（実行コマンド、測�
 - 星空 UI、MCP、VS Code 拡張、大規模性能最適化のループは、基礎的な content semantics / privacy semantics
   （[02-content-semantics.md](spec/02-content-semantics.md), [03-publishing-semantics.md](spec/03-publishing-semantics.md),
   [08-security-and-privacy.md](spec/08-security-and-privacy.md)）が確立するまで開始しない。
+  v0.1 の出荷（CHANGELOG.md [0.1.0]）によりこの前提条件は満たされたため、v0.2 の星空 UI（Graph UI）・
+  性能検証ループはこの制約に妨げられない（[ADR-0010](decisions/ADR-0010-graph-ui-rendering-strategy.md)〜
+  [ADR-0013](decisions/ADR-0013-ci-github-pages-pipeline-scope.md) 参照）。MCP・VS Code 拡張は引き続き対象外。
 
 ## 完了報告の様式
 

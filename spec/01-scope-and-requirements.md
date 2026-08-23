@@ -28,20 +28,30 @@ minimal Markdown vault
 
 ## 3. v0.1 から明示的に除外する機能（DEFERRED）[DECIDED]
 
-以下は enastro の構想に含まれるが、v0.1 では実装しない。理由は「基礎的な content semantics / privacy semantics が確立する前に着手しない」という方針による。
+以下は enastro の構想に含まれるが、v0.1 では実装しない。理由は「基礎的な content semantics / privacy semantics が確立する前に着手しない」という方針による。v0.1 の golden path が確立したことを受け、このうち一部は v0.2 で un-defer された（[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md)〜[ADR-0013](../decisions/ADR-0013-ci-github-pages-pipeline-scope.md)、§3.1 参照）。
 
-| 機能 | 状態 |
-|---|---|
-| Graph UI / WebGL レンダラー / エネルギー粒子表現 | DEFERRED |
-| ローカル AI・Web AI 向けの MCP / CLI query interface (`search_nodes` 等) | DEFERRED |
-| private → CI → public repo の自動公開パイプライン | DEFERRED |
-| 非 Obsidian 入力形式への対応 | DEFERRED |
-| mobile 対応・accessibility 対応 | DEFERRED（v0.1 では OPEN として未検証） |
-| 10,000 nodes / 50,000 edges 規模の性能最適化 | DEFERRED |
-| 複数 vault の同時対応 | DEFERRED |
-| VS Code 拡張 | DEFERRED |
+| 機能 | v0.1 状態 | v0.2 状態 |
+|---|---|---|
+| Graph UI / WebGL レンダラー / エネルギー粒子表現 | DEFERRED | DECIDED（[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md), [ADR-0011](../decisions/ADR-0011-graph-ui-placement.md)） |
+| ローカル AI・Web AI 向けの MCP / CLI query interface (`search_nodes` 等) | DEFERRED | DEFERRED（継続） |
+| private → CI → public repo の自動公開パイプライン (REQ-PUB-008) | DEFERRED | DEFERRED（継続。§3.1 の CI/Pages とは別物） |
+| 非 Obsidian 入力形式への対応 | DEFERRED | DEFERRED（継続） |
+| mobile 対応・accessibility 対応 | DEFERRED（v0.1 では OPEN として未検証） | mobile のレスポンシブ/touch 対応のみ DECIDED（[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md)）。WCAG 準拠等の accessibility 対応は引き続き DEFERRED |
+| 10,000 nodes / 50,000 edges 規模の性能最適化 | DEFERRED | 性能目標の確定・計測は DECIDED（[ADR-0012](../decisions/ADR-0012-v0.2-performance-reference-environment.md)）。最適化そのものは計測結果次第で継続ループへ |
+| 複数 vault の同時対応 | DEFERRED | DEFERRED（継続） |
+| VS Code 拡張 | DEFERRED | DEFERRED（継続） |
+| CI による typecheck/test 実行、GitHub Pages への自動デプロイ | (v0.1 に記載なし) | DECIDED（[ADR-0013](../decisions/ADR-0013-ci-github-pages-pipeline-scope.md)） |
 
 タグによる検索・フィルタリング UI は除外**しない**。v0.1 のスコープに含む。
+
+### 3.1 v0.2 で新たに DECIDED になった事項
+
+- REQ-GRAPH-004, REQ-GRAPH-005: Graph UI（WebGL レンダラー、layout 事前計算 + 実行時ハイブリッド）。
+- REQ-PERF-001: reference environment・benchmark 方法論の確定（数値目標の達成そのものは計測してから判断、未達を理由に機能を削らない）。
+- REQ-UX-009（新設）: Graph UI ページ（`graph.html`）を副画面として追加。
+- REQ-UX-010（新設）: レスポンシブレイアウト + touch pan/zoom 対応（WCAG 等の accessibility 対応は含まない）。
+- REQ-OPS-001〜003（新設、§4.8）: CI による typecheck/test 実行、デモサイトの GitHub Pages 自動公開、
+  エンドユーザー向け再利用可能な公開 workflow テンプレートの提供。
 
 ## 4. Requirement 一覧
 
@@ -89,8 +99,8 @@ minimal Markdown vault
 | REQ-GRAPH-001 | システムは Knowledge Base を単一の Knowledge Graph IR へコンパイル **MUST**（projection 生成前に必ず経由する）。 | DECIDED |
 | REQ-GRAPH-002 | wikilink は directed edge として表現 **MUST**。 | DECIDED |
 | REQ-GRAPH-003 | システムは graph IR から backlink（逆方向 edge）を導出 **MUST**。 | DECIDED |
-| REQ-GRAPH-004 | Graph UI（WebGL レンダラー・星表現・光の伝播表現）は v0.1 で実装しない。 | DEFERRED |
-| REQ-GRAPH-005 | layout 座標の build 時事前計算、および実行時の物理演算/再配置のハイブリッド方式は将来方針として維持するが、v0.1 では実装しない。 | DEFERRED |
+| REQ-GRAPH-004 | Graph UI（WebGL レンダラー・星表現・光の伝播表現）を v0.2 で実装する **MUST**。副画面 `graph.html` として追加し、ノートビューを主画面のまま維持する（[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md), [ADR-0011](../decisions/ADR-0011-graph-ui-placement.md)）。 | DECIDED |
+| REQ-GRAPH-005 | layout 座標の build 時事前計算、および実行時のユーザー操作に応じた追加の物理演算/再配置のハイブリッド方式を v0.2 で実装する **MUST**（[ADR-0006](../decisions/ADR-0006-graph-layout-precomputation-strategy.md), [ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md)）。 | DECIDED |
 
 ### 4.4 UX
 
@@ -104,6 +114,8 @@ minimal Markdown vault
 | REQ-UX-006 | ノートページには一覧ページ（`index.html`）へのナビゲーションリンクを常に表示する **SHOULD**。 | DECIDED |
 | REQ-UX-007 | ノートページには ID の近くに最終更新日時（ファイルの mtime 由来）を表示し、検索対象に含める **SHOULD**。ビルドの決定性（REQ-BUILD-001）を保つため、静的 HTML には UTC 表示をフォールバックとして埋め込み、閲覧者のブラウザ上で JavaScript により閲覧者のローカルタイムゾーンでの表示に強化する。作成日時は取得元の信頼性の問題（filesystem birthtime の非対応・git checkout によるリセット）から v0.1 では対象外とする。 | DECIDED |
 | REQ-UX-008 | ノートページの `#tag` はリンクとして表示され、クリックすると一覧ページ（`index.html`）の対応するタグでフィルタされた表示に遷移する **SHOULD**。 | DECIDED |
+| REQ-UX-009 | Graph UI ページ（`graph.html`）をノート一覧・ノートページから相互にリンクできる副画面として提供する **MUST**（[ADR-0011](../decisions/ADR-0011-graph-ui-placement.md)）。 | DECIDED |
+| REQ-UX-010 | 出力は PC・モバイル両方でレスポンシブなレイアウトを提供し、Graph UI は touch による pan/zoom 操作をサポートする **MUST**。WCAG 準拠等の包括的 accessibility 対応は対象外（引き続き DEFERRED）。 | DECIDED |
 
 ### 4.5 SEC
 
@@ -125,7 +137,15 @@ minimal Markdown vault
 
 | ID | 要件 | Status |
 |---|---|---|
-| REQ-PERF-001 | 10,000 nodes / 50,000 edges 規模での性能目標（first interactive frame ≤ 1,000ms 等）は v0.1 の対象外。reference environment（hardware / browser / percentile）は未決定。 | DEFERRED / OPEN |
+| REQ-PERF-001 | 10,000 nodes / 50,000 edges 規模での性能目標（first interactive frame ≤ 1,000ms 等）を v0.2 で確定し、fixtures/benchmark-vault で計測する **SHOULD**。reference environment（hardware / browser / percentile）は [ADR-0012](../decisions/ADR-0012-v0.2-performance-reference-environment.md) で確定。目標未達でも node/edge/機能を黙って省略してはならない。 | DECIDED |
+
+### 4.8 OPS
+
+| ID | 要件 | Status |
+|---|---|---|
+| REQ-OPS-001 | CI は push / pull request をトリガーに typecheck と test 一式を実行する **MUST**（[ADR-0013](../decisions/ADR-0013-ci-github-pages-pipeline-scope.md)）。 | DECIDED |
+| REQ-OPS-002 | `main` ブランチへの push を契機に、本リポジトリのデモ vault をビルドし GitHub Pages に自動デプロイする **MUST**（[ADR-0013](../decisions/ADR-0013-ci-github-pages-pipeline-scope.md)。GitHub 公式 action のみ使用）。 | DECIDED |
+| REQ-OPS-003 | エンドユーザーが自分の vault を自分の GitHub Pages に公開するための再利用可能な workflow テンプレートを文書として提供する **SHOULD**（REQ-PUB-008 とは別物、自動ミラーリングは伴わない）。 | DECIDED |
 
 ## 5. Traceability 表
 
@@ -162,5 +182,14 @@ minimal Markdown vault
 | 00: 一覧ページへのナビゲーション | REQ-UX-006 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
 | 00: 最終更新日時の表示・検索対象化 | REQ-UX-007 | (render/build 実装) | 09 §2.5 | fixtures/basic-vault |
 | 00: タグのフィルタリンク化 | REQ-UX-008 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
+| 02: Graph UI レンダリング | REQ-GRAPH-004 | ADR-0010, ADR-0011 | 09 §2.5（新設予定） | fixtures/demo-vault, fixtures/benchmark-vault |
+| 02: layout 事前計算/実行時ハイブリッド | REQ-GRAPH-005 | ADR-0006, ADR-0010 | 09 §2.5（新設予定） | fixtures/benchmark-vault |
+| 02: Graph UI 副画面としての追加 | REQ-UX-009 | ADR-0011 | 09 §2.5（新設予定） | fixtures/demo-vault |
+| 02: レスポンシブ/touch 対応 | REQ-UX-010 | (render/client 実装) | 09 §2.5（新設予定） | fixtures/demo-vault |
+| 02: 性能目標の確定・計測 | REQ-PERF-001 | ADR-0012 | 09 §2.5（新設予定） | fixtures/benchmark-vault |
+| 02: CI typecheck/test | REQ-OPS-001 | ADR-0013 | - | - |
+| 02: GitHub Pages 自動デプロイ | REQ-OPS-002 | ADR-0013 | - | fixtures/demo-vault |
+| 02: 再利用可能な公開テンプレート | REQ-OPS-003 | ADR-0013 | - | - |
 
-DEFERRED な REQ（REQ-PUB-008, REQ-GRAPH-004〜005, REQ-PERF-001 等）は本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。
+DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
+本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。

@@ -2,10 +2,11 @@
 
 Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 
-## 1. v0.1 の主画面 [DECIDED]
+## 1. v0.1/v0.2 の主画面 [DECIDED]
 
 - v0.1 の主画面はノート/ドキュメントビューである（REQ-UX-005）。Graph UI（星空 UI）は v0.1 に含めない（DEFERRED）。
-- 長期的には Graph UI を主画面に据える方針（製品構想と整合）。この移行方針・タイミングは Graph UI 着手ループで再設計する。
+- v0.2 では Graph UI を `graph.html` という**副画面**として追加する。ノート/ドキュメントビューは引き続き既定の着地点（主画面）のままとする（[ADR-0011](../decisions/ADR-0011-graph-ui-placement.md)）。
+- 長期的には Graph UI を主画面に据える方針（製品構想と整合）。この移行方針・タイミングは v0.2 の human review フィードバックを踏まえた後続ループで再設計する。
 
 ## 2. v0.1 で提供する機能 [DECIDED]
 
@@ -14,13 +15,15 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 - ノートごとの backlink 一覧（REQ-UX-003）
 - 静的ホスティング可能な出力（REQ-UX-004）
 
-## 3. Graph UI 関連の未決事項 [OPEN]
+## 2.1 v0.2 で追加する機能 [DECIDED]
 
-以下は Graph UI 着手時に改めてユーザーへ質問する。
+- Graph UI（WebGL レンダラー・星表現・edge 上のエネルギー粒子表現、[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md)）
+- レスポンシブレイアウト + touch による pan/zoom 操作（REQ-UX-010）。WCAG 準拠等の包括的 accessibility 対応は対象外のまま。
 
-- 参考にしたい UI / 明確に避けたい UI
-- 星の視覚表現（色・サイズ・アニメーション）の具体的な仕様
-- edge 上の光/エネルギー粒子表現の具体的な仕様
+## 3. Graph UI の視覚・interaction 仕様 [DECIDED（方針）/ PROPOSED（詳細パラメータ）]
+
+- [ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md) により、Foam の `foam-graph`（force-graph + d3-force + `linkDirectionalParticles`）を概念上の参考にしつつ、WebGL（pixi.js）で再実装する方針を DECIDED とした。
+- 星の視覚表現（色・サイズ・アニメーション）・edge 上のエネルギー粒子表現の具体的パラメータ（速度・密度・色等）は実装ループで PROPOSED として提示し、§4 の human review で確定する。
 
 ## 4. 「美しさ」の評価方法 [DECIDED]
 
