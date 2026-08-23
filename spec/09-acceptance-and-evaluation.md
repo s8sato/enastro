@@ -11,13 +11,13 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 | golden test | 既知の入力に対する決定的な出力（決定的 build の検証、artifact 構成の回帰検出） |
 | schema validation | graph.json / search-index.json 等の artifact 契約の検証 |
 | privacy scan | 公開 artifact 全体を走査し、非公開情報の非出現を確認 |
-| browser E2E test | ブラウザ上での実際の操作フロー検証（v0.1 では最小限） |
-| visual regression | 見た目のピクセル/スクリーンショット差分検出（v0.1 では Graph UI 不在のため未使用、DEFERRED） |
-| accessibility test | a11y 検証（v0.1 では DEFERRED、OPEN） |
-| performance benchmark | 性能目標の計測（v0.1 では DEFERRED） |
+| browser E2E test | ブラウザ上での実際の操作フロー検証（v0.1 では最小限、v0.2 で Graph UI 操作を追加） |
+| visual regression | 見た目のピクセル/スクリーンショット差分検出（v0.2 でも自動化された visual regression は未導入、引き続き DEFERRED。README のデモ画像更新等は human review で代替） |
+| accessibility test | a11y 検証（v0.2 でもタッチ操作対応のみ REQ-UX-010 で DECIDED。WCAG 準拠等の包括的検証は引き続き DEFERRED、OPEN） |
+| performance benchmark | 性能目標の計測。v0.2 で REQ-PERF-001/ADR-0012 により DECIDED、`npm run bench`（`fixtures/benchmark-vault`）で計測を実施 |
 | human review | 自動判定できない「美しさ」「心地よさ」等の主観的品質の確認 |
 
-## 2. Requirement ごとの検証方法（v0.1 スコープ）
+## 2. Requirement ごとの検証方法（v0.1 + v0.2 スコープ）
 
 ### 2.1 公開選択・content semantics
 
@@ -65,11 +65,24 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 | REQ-UX-008 | unit test（`#tag` が index.html へのフィルタリンクに変換されること）+ browser E2E test（タグクリックでの遷移） | basic-vault |
 | 美しさ・視覚的品質全般 | human review（自動スコア化しない） | - |
 
-## 3. v0.1 では実施しない検証 [DEFERRED]
+### 2.6 v0.2: Graph UI / 性能 / OPS
 
-- visual regression（Graph UI 不在のため）
-- accessibility test（DEFERRED 対象機能がないため範囲が定義できず、OPEN）
-- performance benchmark（REQ-PERF-001 が DEFERRED のため）
+| REQ | 検証方法 | fixture |
+|---|---|---|
+| REQ-GRAPH-004 | unit test（graph.json への layout 座標出力）+ browser E2E test（`src/e2e/graph-ui.e2e.test.ts`、ノード描画・クリックでのノートページ遷移） | demo-vault, benchmark-vault |
+| REQ-GRAPH-005 | unit test（build 時の d3-force layout 事前計算結果の決定性） | benchmark-vault |
+| REQ-UX-009 | browser E2E test（`graph.html` への相互リンクの存在・遷移） | demo-vault |
+| REQ-UX-010 | browser E2E test（`src/e2e/graph-ui.e2e.test.ts`、pointer/touch イベントによる pan/zoom・tap-to-preview/tap-to-navigate の動作確認）+ human review（レスポンシブレイアウトの見た目） | demo-vault |
+| REQ-PERF-001 | performance benchmark（`npm run bench`、`scripts/bench.mjs` による build 時間・first interactive frame・タグフィルタ latency・pan/zoom FPS の計測。reference environment は [ADR-0012](../decisions/ADR-0012-v0.2-performance-reference-environment.md)） | benchmark-vault |
+| REQ-OPS-001 | human review（CI ワークフロー（`.github/workflows/ci.yml`）が push/pull request で typecheck・test を実行することの確認。ワークフロー自体を検証する自動テストは持たない） | - |
+| REQ-OPS-002 | human review（`.github/workflows/deploy-demo.yml` によるデモサイトの GitHub Pages 自動公開の動作確認） | demo-vault |
+| REQ-OPS-003 | human review（README のテンプレート workflow が記載通りに動作することの確認。enastro 自身のテストではエンドユーザー環境を再現しない） | - |
+
+## 3. 引き続き自動検証を実施しない項目 [DEFERRED]
+
+- visual regression（v0.2 でも自動化された visual regression は未導入。継続 DEFERRED）
+- accessibility test（WCAG 準拠等の包括的検証。対象範囲が未定義のため継続 OPEN。タッチ操作対応のみ
+  REQ-UX-010 の browser E2E test で検証する）
 
 ## 4. Human review が必須な項目 [DECIDED]
 

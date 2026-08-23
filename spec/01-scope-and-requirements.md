@@ -182,14 +182,14 @@ minimal Markdown vault
 | 00: 一覧ページへのナビゲーション | REQ-UX-006 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
 | 00: 最終更新日時の表示・検索対象化 | REQ-UX-007 | (render/build 実装) | 09 §2.5 | fixtures/basic-vault |
 | 00: タグのフィルタリンク化 | REQ-UX-008 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
-| 02: Graph UI レンダリング | REQ-GRAPH-004 | ADR-0010, ADR-0011 | 09 §2.5（新設予定） | fixtures/demo-vault, fixtures/benchmark-vault |
-| 02: layout 事前計算/実行時ハイブリッド | REQ-GRAPH-005 | ADR-0006, ADR-0010 | 09 §2.5（新設予定） | fixtures/benchmark-vault |
-| 02: Graph UI 副画面としての追加 | REQ-UX-009 | ADR-0011 | 09 §2.5（新設予定） | fixtures/demo-vault |
-| 02: レスポンシブ/touch 対応 | REQ-UX-010 | (render/client 実装) | 09 §2.5（新設予定） | fixtures/demo-vault |
-| 02: 性能目標の確定・計測 | REQ-PERF-001 | ADR-0012 | 09 §2.5（新設予定） | fixtures/benchmark-vault |
-| 02: CI typecheck/test | REQ-OPS-001 | ADR-0013 | - | - |
-| 02: GitHub Pages 自動デプロイ | REQ-OPS-002 | ADR-0013 | - | fixtures/demo-vault |
-| 02: 再利用可能な公開テンプレート | REQ-OPS-003 | ADR-0013 | - | - |
+| 02: Graph UI レンダリング | REQ-GRAPH-004 | ADR-0010, ADR-0011 | 09 §2.6 | fixtures/demo-vault, fixtures/benchmark-vault |
+| 02: layout 事前計算/実行時ハイブリッド | REQ-GRAPH-005 | ADR-0006, ADR-0010 | 09 §2.6 | fixtures/benchmark-vault |
+| 02: Graph UI 副画面としての追加 | REQ-UX-009 | ADR-0011 | 09 §2.6 | fixtures/demo-vault |
+| 02: レスポンシブ/touch 対応 | REQ-UX-010 | (render/client 実装) | 09 §2.6 | fixtures/demo-vault |
+| 02: 性能目標の確定・計測 | REQ-PERF-001 | ADR-0012 | 09 §2.6 | fixtures/benchmark-vault |
+| 02: CI typecheck/test | REQ-OPS-001 | ADR-0013 | 09 §2.6 | - |
+| 02: GitHub Pages 自動デプロイ | REQ-OPS-002 | ADR-0013 | 09 §2.6 | fixtures/demo-vault |
+| 02: 再利用可能な公開テンプレート | REQ-OPS-003 | ADR-0013 | 09 §2.6 | - |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
 本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。
