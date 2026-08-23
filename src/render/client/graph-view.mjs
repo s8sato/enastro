@@ -177,8 +177,11 @@ async function main() {
     const text = new PIXI.Text({
       text: node.title,
       style: {
-        fontFamily: "system-ui, sans-serif",
-        fontSize: primary ? 13 : 11,
+        // Matches --font-display / note titles (h1/h2) in site.css, so the
+        // floating graph labels read as the same "note title" typography
+        // used elsewhere on the site.
+        fontFamily: 'Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif',
+        fontSize: primary ? 18 : 15,
         fontWeight: primary ? "700" : "400",
         fill: primary ? LABEL_PRIMARY_COLOR : LABEL_NEIGHBOR_COLOR,
       },
