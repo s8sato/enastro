@@ -4,3 +4,4 @@ dist-ts/
 *.log
 dist-demo/
 /fixtures/benchmark-vault/vault/
+/out/
