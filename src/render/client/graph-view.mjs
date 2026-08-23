@@ -65,7 +65,17 @@ async function main() {
   }
 
   const app = new PIXI.Application();
-  await app.init({ resizeTo: container, backgroundAlpha: 0, antialias: true });
+  // Explicit resolution (defaults to 1 otherwise, which renders text/node
+  // outlines blurry on high-DPI mobile screens) + autoDensity so the
+  // canvas's CSS size still matches its container while the backing
+  // bitmap is rendered at the device's native pixel density.
+  await app.init({
+    resizeTo: container,
+    backgroundAlpha: 0,
+    antialias: true,
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true,
+  });
   container.appendChild(app.canvas);
 
   const world = new PIXI.Container();
