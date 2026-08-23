@@ -24,7 +24,7 @@ describe("buildSite (fixtures/basic-vault)", () => {
     expect(warnings).toEqual([]);
 
     const topLevel = readdirSync(outDir).sort();
-    expect(topLevel).toEqual(["graph.json", "index.html", "notes", "search-index.json"]);
+    expect(topLevel).toEqual(["assets", "graph.json", "index.html", "notes", "search-index.json"]);
 
     const noteFiles = readdirSync(path.join(outDir, "notes")).sort();
     expect(noteFiles).toEqual([

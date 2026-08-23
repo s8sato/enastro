@@ -37,10 +37,19 @@ ${backlinksHtml}
 `;
 }
 
-/** Assembles the site index page listing all published notes. */
+/**
+ * Assembles the site index page listing all published notes, with a
+ * client-side search box and tag filter UI (REQ-UX-001, REQ-UX-002). The
+ * note list itself is always rendered server-side so it remains fully
+ * usable without JavaScript (progressive enhancement); search.mjs only
+ * hides/shows entries in place.
+ */
 export function renderIndexPage(nodes: PublicNode[]): string {
   const items = nodes
-    .map((node) => `<li><a href="notes/${node.id}.html">${escapeHtml(node.title)}</a></li>`)
+    .map(
+      (node) =>
+        `<li data-id="${escapeHtml(node.id)}"><a href="notes/${node.id}.html">${escapeHtml(node.title)}</a></li>`,
+    )
     .join("");
 
   return `<!DOCTYPE html>
@@ -51,7 +60,11 @@ export function renderIndexPage(nodes: PublicNode[]): string {
 </head>
 <body>
 <h1>Notes</h1>
-<ul>${items}</ul>
+<input type="search" id="search-box" placeholder="Search notes...">
+<div id="tag-filters"></div>
+<p id="no-results" hidden>No notes match the current search/filter.</p>
+<ul id="note-list">${items}</ul>
+<script type="module" src="assets/search.mjs"></script>
 </body>
 </html>
 `;

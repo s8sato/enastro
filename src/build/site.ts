@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { buildGraph } from "../graph/build.js";
 import { computeBacklinks } from "../graph/backlinks.js";
 import { buildPublicProjection } from "../projection/build.js";
@@ -8,6 +9,13 @@ import { renderIndexPage, renderNoteBody, renderNotePage } from "../render/index
 import { loadVaultConfig } from "../vault/config.js";
 import { discoverAttachments } from "../vault/discover-attachments.js";
 import { buildSearchIndexEntry, type SearchIndexEntry } from "./search-index.js";
+
+// Static client-side assets (search.mjs, filter.mjs) for the search/tag
+// filter UI (REQ-UX-001, REQ-UX-002). Resolved relative to this module so it
+// works whether this runs directly from src/ (tests, via vitest) or from
+// dist-ts/ (CLI, after `npm run build` + scripts/copy-client-assets.mjs).
+const CLIENT_ASSETS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "../render/client");
+const CLIENT_ASSET_FILENAMES = ["filter.mjs", "search.mjs"];
 
 export interface BuildSiteResult {
   /** Human-readable warnings (e.g. edges dropped because the target was
@@ -46,6 +54,11 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
 
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(path.join(outDir, "notes"), { recursive: true });
+  mkdirSync(path.join(outDir, "assets"), { recursive: true });
+
+  for (const filename of CLIENT_ASSET_FILENAMES) {
+    copyFileSync(path.join(CLIENT_ASSETS_DIR, filename), path.join(outDir, "assets", filename));
+  }
 
   for (const attachmentId of [...publishedAttachmentIds].sort()) {
     const attachment = attachmentById.get(attachmentId)!;

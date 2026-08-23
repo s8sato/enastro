@@ -8,7 +8,7 @@
     "enastro": "bin/enastro.mjs"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-client-assets.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

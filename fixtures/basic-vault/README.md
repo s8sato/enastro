@@ -54,5 +54,19 @@ REQ-CONTENT-007, REQ-UX-003/004）。検証内容:
   unit test（ajv 等の依存なし、REQ-BUILD-002）。
 
 なお REQ-UX-001（全文検索）・REQ-UX-002（タグ検索/フィルタ）は `search-index.json`
-という**データ**の生成までが実装済みで、検索 UI（フロントエンド JS）自体は未実装
-であり、次ループ以降の対象。CLI（`bin/enastro.mjs`）は最小実装済み。
+の生成に加え、クライアントサイドの検索・タグ絞り込み UI（`src/render/client/filter.mjs`,
+`src/render/client/search.mjs`, 依存なしの vanilla ESM）も実装済み。`renderIndexPage()`
+が `index.html` に検索ボックス・タグフィルタ領域・`data-id` 付きノート一覧・
+`<script type="module" src="assets/search.mjs">` を出力し、`buildSite()` が
+`dist/assets/` にこれらのクライアントアセットをコピーする。JavaScript 無効時は
+元のノート一覧がそのまま表示される（progressive enhancement）。検証内容:
+
+- `src/render/client/filter.test.ts`: フィルタの純粋関数 `filterEntries()` の
+  unit test（AND タグ一致、大小無視の部分一致、クエリ/タグ空時の全件マッチ等）。
+- `src/build/site.search-ui.test.ts`: この vault に対する統合テスト（クライアント
+  アセットがソースとバイト一致でコピーされること、`index.html` に検索/フィルタ
+  UI 要素が含まれること）。
+
+`fetch("search-index.json")` はブラウザの `file://` プロトコルでは CORS 制限に
+より動作しないため、静的 HTTP サーバ経由での配信を前提とする。CLI（`bin/enastro.mjs`）
+は最小実装済み。
