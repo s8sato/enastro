@@ -39,3 +39,40 @@ describe("filterEntries (REQ-UX-001, REQ-UX-002)", () => {
     expect(filterEntries(entries, "nonexistent", [])).toEqual([]);
   });
 });
+
+// Reproduces a gap observed during manual localhost verification of the
+// basic-vault fixture's real search-index.json output (fields captured
+// verbatim from an actual build): multi-word queries composed of terms
+// that are individually present in a note's id/title/tags/text, but not
+// as one contiguous substring, currently fail to match — because
+// filterEntries treats the whole query as a single literal substring
+// against id/title/text, and never searches tags at all.
+describe("filterEntries: multi-word queries and tag text (REQ-UX-001)", () => {
+  const realEntries = [
+    {
+      id: "note-a",
+      title: "Note A",
+      tags: ["example", "inline-tag"],
+      text: "Note A This note links to Note B and also to 表示名 . It also has an inline #inline-tag.",
+    },
+    {
+      id: "note-b",
+      title: "Note B",
+      tags: [],
+      text: "Note B This note is linked from Note A and should receive a backlink from it.",
+    },
+  ];
+
+  it.each([
+    "note-a example 表示名",
+    "note-a example",
+    "note-a 表示名",
+    "example 表示名",
+    "example inline-tag",
+    "example",
+    "This links",
+    "Note B",
+  ])("matches note-a for the multi-term query %j", (query) => {
+    expect(filterEntries(realEntries, query, [])).toContain("note-a");
+  });
+});
