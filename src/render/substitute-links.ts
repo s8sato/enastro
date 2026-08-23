@@ -64,7 +64,7 @@ export function substituteLinks(
         const noteResult = resolveTarget(target, index);
         if (noteResult.status === "resolved") {
           if (publishById.get(noteResult.nodeId)) {
-            return `[${label}](notes/${noteResult.nodeId}.html)`;
+            return `[${label}](${noteResult.nodeId}.html)`;
           }
 
           removedTargets.push(target);
