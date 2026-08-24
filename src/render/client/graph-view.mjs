@@ -23,15 +23,74 @@ import { getStatusSnapshot } from "./exploration.mjs";
 
 // Color palette mirrors site.css's design tokens (`--accent`, `--nebula`,
 // `--border`, `--fg`) so the Graph UI feels visually continuous with the
-// rest of the site rather than using its own unrelated cyan/violet pair.
-// graph-view.mjs is a standalone module (no CSS variable access at
-// runtime), so the values are duplicated here as plain hex literals.
-const ACCENT = 0xf2c879; // starlight gold, matches --accent
-const EDGE_COLOR = 0x1d2044; // matches --border
-const PARTICLE_COLOR = 0xeae8f2; // matches --fg
-const EXPLORED_COLOR = 0x8b8fb0; // matches --fg-muted; used to dim/desaturate "read" notes (REQ-EXPLORE-005)
-const LABEL_PRIMARY_COLOR = 0xeae8f2; // matches --fg, achromatic (no accent hue)
-const LABEL_NEIGHBOR_COLOR = 0x8b8fb0; // matches --fg-muted, achromatic
+// rest of the site, and follows whichever of the 12 themes (REQ-UX-011) is
+// currently active rather than a single hardcoded palette. graph-view.mjs
+// is a standalone canvas renderer (pixi.js draw calls take numeric colors,
+// not CSS `var()`), so colors are read from the live, fully-resolved CSS
+// custom property values via `resolveCssColor()` below, and re-read
+// whenever `data-theme` changes (see the MutationObserver near the bottom
+// of `main()`). The hex literals here are only fallbacks for the unlikely
+// case a token can't be resolved (e.g. no `document.body` yet).
+const ACCENT_FALLBACK = 0xf2c879; // starlight gold, matches --accent (Moon theme)
+const EDGE_COLOR_FALLBACK = 0x1d2044; // matches --border
+const PARTICLE_COLOR_FALLBACK = 0xeae8f2; // matches --fg
+const EXPLORED_COLOR_FALLBACK = 0x8b8fb0; // matches --fg-muted; used to dim/desaturate "read" notes (REQ-EXPLORE-005)
+const LABEL_PRIMARY_COLOR_FALLBACK = 0xeae8f2; // matches --fg, achromatic (no accent hue)
+const LABEL_NEIGHBOR_COLOR_FALLBACK = 0x8b8fb0; // matches --fg-muted, achromatic
+
+// A single hidden probe element used to resolve a CSS custom property to
+// its final, computed color (`getComputedStyle` never resolves a custom
+// property's own value, e.g. a `color-mix()` expression, but it always
+// fully resolves a real property like `color` that merely *references*
+// one via `var()`). A 1x1 canvas then converts that computed color string
+// to concrete sRGB bytes: modern browsers may serialize a computed color
+// in formats other than `rgb(...)` (e.g. `oklab(...)`), and canvas
+// `fillStyle` accepts (and normalizes) any valid CSS `<color>` syntax, so
+// parsing via canvas is robust to that instead of regex-matching `rgb()`.
+let colorProbe;
+let colorCanvasCtx;
+
+/**
+ * @param {string} cssVarName e.g. "--accent"
+ * @param {number} fallback hex color used if the variable can't be resolved
+ */
+function resolveCssColor(cssVarName, fallback) {
+  if (!colorProbe) {
+    colorProbe = document.createElement("div");
+    colorProbe.style.position = "absolute";
+    colorProbe.style.visibility = "hidden";
+    colorProbe.style.pointerEvents = "none";
+    document.body.appendChild(colorProbe);
+  }
+  if (!colorCanvasCtx) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    colorCanvasCtx = canvas.getContext("2d");
+  }
+  colorProbe.style.color = `var(${cssVarName})`;
+  const resolved = getComputedStyle(colorProbe).color;
+  try {
+    colorCanvasCtx.fillStyle = resolved;
+    colorCanvasCtx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = colorCanvasCtx.getImageData(0, 0, 1, 1).data;
+    return (r << 16) | (g << 8) | b;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Re-reads all theme-dependent colors from the current `data-theme`. */
+function readThemeColors() {
+  return {
+    accent: resolveCssColor("--accent", ACCENT_FALLBACK),
+    edge: resolveCssColor("--border", EDGE_COLOR_FALLBACK),
+    particle: resolveCssColor("--fg", PARTICLE_COLOR_FALLBACK),
+    explored: resolveCssColor("--fg-muted", EXPLORED_COLOR_FALLBACK),
+    labelPrimary: resolveCssColor("--fg", LABEL_PRIMARY_COLOR_FALLBACK),
+    labelNeighbor: resolveCssColor("--fg-muted", LABEL_NEIGHBOR_COLOR_FALLBACK),
+  };
+}
 
 const MIN_NODE_RADIUS = 3;
 const MAX_NODE_RADIUS = 10;
@@ -67,6 +126,8 @@ async function main() {
     if (status) status.textContent = "This vault has no published notes yet.";
     return;
   }
+
+  let colors = readThemeColors();
 
   const app = new PIXI.Application();
   // Explicit resolution (defaults to 1 otherwise, which renders text/node
@@ -120,7 +181,7 @@ async function main() {
       if (!activeNodeIds.has(source.id) || !activeNodeIds.has(target.id)) continue;
       edgesLayer.moveTo(source.x, source.y).lineTo(target.x, target.y);
     }
-    edgesLayer.stroke({ width: 1, color: EDGE_COLOR, alpha: 0.5 });
+    edgesLayer.stroke({ width: 1, color: colors.edge, alpha: 0.5 });
   }
   redrawEdges();
 
@@ -141,7 +202,7 @@ async function main() {
   const particleLayer = new PIXI.Container();
   world.addChild(particleLayer);
   const particles = validEdges.map(({ source, target }) => {
-    const dot = new PIXI.Graphics().circle(0, 0, 1.5).fill({ color: PARTICLE_COLOR, alpha: 0.9 });
+    const dot = new PIXI.Graphics().circle(0, 0, 1.5).fill({ color: colors.particle, alpha: 0.9 });
     dot.x = source.x;
     dot.y = source.y;
     particleLayer.addChild(dot);
@@ -166,7 +227,7 @@ async function main() {
     const degree = degreeById.get(node.id) ?? 0;
     const radius = MIN_NODE_RADIUS + (MAX_NODE_RADIUS - MIN_NODE_RADIUS) * Math.sqrt(degree / maxDegree);
 
-    const star = new PIXI.Graphics().circle(0, 0, radius).fill({ color: ACCENT, alpha: 0.95 });
+    const star = new PIXI.Graphics().circle(0, 0, radius).fill({ color: colors.accent, alpha: 0.95 });
     star.x = node.x;
     star.y = node.y;
     star.eventMode = "static";
@@ -193,12 +254,12 @@ async function main() {
       const radius = MIN_NODE_RADIUS + (MAX_NODE_RADIUS - MIN_NODE_RADIUS) * Math.sqrt(degree / maxDegree);
       const isExplored = exploredIds.has(node.id);
       star.clear();
-      star.circle(0, 0, radius).fill({ color: isExplored ? EXPLORED_COLOR : ACCENT, alpha: isExplored ? 0.5 : 0.95 });
+      star.circle(0, 0, radius).fill({ color: isExplored ? colors.explored : colors.accent, alpha: isExplored ? 0.5 : 0.95 });
     }
     for (const particle of particles) {
       const isExplored = exploredIds.has(particle.source.id);
       particle.dot.clear();
-      particle.dot.circle(0, 0, 1.5).fill({ color: isExplored ? EXPLORED_COLOR : PARTICLE_COLOR, alpha: isExplored ? 0.4 : 0.9 });
+      particle.dot.circle(0, 0, 1.5).fill({ color: isExplored ? colors.explored : colors.particle, alpha: isExplored ? 0.4 : 0.9 });
     }
   }
   applyExploration();
@@ -209,6 +270,16 @@ async function main() {
     );
     applyExploration();
   });
+
+  // Theme switcher (REQ-UX-011) sets `data-theme` on <html> synchronously,
+  // including live hover-preview before a choice is committed — re-resolve
+  // colors and redraw whenever it changes, so the graph tracks the switcher
+  // just like the rest of the (CSS-driven) page does.
+  new MutationObserver(() => {
+    colors = readThemeColors();
+    redrawEdges();
+    applyExploration();
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   // Hover titles are rendered as floating labels next to each relevant node
   // (rather than aggregated in the bottom-left status bar), in screen space
@@ -250,7 +321,7 @@ async function main() {
         fontFamily: 'Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif',
         fontSize: primary ? 18 : 15,
         fontWeight: primary ? "700" : "400",
-        fill: primary ? LABEL_PRIMARY_COLOR : LABEL_NEIGHBOR_COLOR,
+        fill: primary ? colors.labelPrimary : colors.labelNeighbor,
       },
     });
     text.anchor.set(facingLeft ? 1 : 0, 0.5);
@@ -311,7 +382,7 @@ async function main() {
       showLabel(neighborNode, { primary: false, awayFrom: node });
       highlightEdgesLayer.moveTo(node.x, node.y).lineTo(neighborStar.x, neighborStar.y);
     }
-    highlightEdgesLayer.stroke({ width: 3, color: EDGE_COLOR, alpha: 0.9 });
+    highlightEdgesLayer.stroke({ width: 3, color: colors.edge, alpha: 0.9 });
   }
 
   function clearHighlight(node) {
@@ -467,6 +538,14 @@ async function main() {
     // rendered fill color, which pixel inspection would make brittle.
     isExplored(id) {
       return exploredIds.has(id);
+    },
+    // Theme switcher (REQ-UX-011), for E2E test instrumentation (see
+    // src/e2e/theme-switcher.e2e.test.ts) — the star's fill color is only
+    // ever set via a pixi.js draw call (not CSS), so it isn't otherwise
+    // queryable from outside this module without brittle pixel inspection.
+    getNodeColor(id) {
+      const isExplored = exploredIds.has(id);
+      return isExplored ? colors.explored : colors.accent;
     },
   };
 

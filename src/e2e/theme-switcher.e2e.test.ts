@@ -38,7 +38,12 @@ afterAll(async () => {
 afterEach(async () => {
   // Themes are pure client-side preference state (REQ-UX-011); reset it
   // between tests so each test starts from the default (Moon) theme.
-  await page.evaluate(() => localStorage.removeItem("enastro:theme:v1"));
+  // Also reset exploration status (REQ-EXPLORE-*) since one test marks
+  // note-a read to exercise the mark-read icon's theme-reactive color.
+  await page.evaluate(() => {
+    localStorage.removeItem("enastro:theme:v1");
+    localStorage.removeItem("enastro:exploration:v1");
+  });
 });
 
 describe("browser E2E: 12-theme switcher (REQ-UX-011)", () => {
@@ -103,5 +108,65 @@ describe("browser E2E: 12-theme switcher (REQ-UX-011)", () => {
       .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
       .toBe("nova");
     expect(await page.evaluate(() => localStorage.getItem("enastro:theme:v1"))).toBe("nova");
+  });
+
+  it("updates the graph's node fill color to the active theme's accent (REQ-UX-011)", async () => {
+    await page.goto(`${baseUrl}/graph.html`);
+    await expect
+      .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
+      .toBe("true");
+
+    await page.click("#theme-trigger");
+    await page.locator("#theme-select").selectOption("aurora");
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+      .toBe("aurora");
+
+    // Aurora's --accent is #7dffb3 (see THEMES in theme-switcher.mjs);
+    // unexplored nodes are always drawn in the active theme's accent color.
+    const nodeColor = await page.evaluate(() =>
+      (globalThis as any).window.__enastroGraph.getNodeColor("note-a"),
+    );
+    expect(nodeColor).toBe(0x7dffb3);
+  });
+
+  it("updates the mark-read icon's color to the active theme's accent once a note is read (REQ-UX-011)", async () => {
+    await page.goto(`${baseUrl}/index.html`);
+    await page.click("#theme-trigger");
+    await page.locator("#theme-select").selectOption("aurora");
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem("enastro:theme:v1")))
+      .toBe("aurora");
+
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe("aurora");
+
+    await page.click("[data-mark-read]");
+    await expect
+      .poll(() => page.locator("[data-mark-read]").getAttribute("aria-pressed"))
+      .toBe("true");
+
+    // `.mark-read-button`'s background-color has a 160ms CSS transition
+    // (site.css), so poll rather than reading immediately after the click.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const button = document.querySelector(".mark-read-button") as Element;
+          const resolved = getComputedStyle(button, "::before").backgroundColor;
+          // Browsers may serialize a computed color in formats other than
+          // `rgb(...)` (e.g. `oklab(...)`); canvas fillStyle accepts (and
+          // normalizes) any valid CSS <color>, so read back concrete sRGB
+          // bytes via a 1x1 canvas instead of parsing the string directly.
+          const canvas = document.createElement("canvas");
+          canvas.width = 1;
+          canvas.height = 1;
+          const ctx = canvas.getContext("2d")!;
+          ctx.fillStyle = resolved;
+          ctx.fillRect(0, 0, 1, 1);
+          return Array.from(ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)).join(",");
+        }),
+      )
+      // #7dffb3 == rgb(125, 255, 179)
+      .toBe("125,255,179");
   });
 });

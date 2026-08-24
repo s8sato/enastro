@@ -696,23 +696,41 @@ span.broken-link {
 /* Shared "Mark as read" toggle button on note pages — icon-only (same
  * visually-hidden-label technique as .copy-id) so it doesn't compete with
  * the note id for attention; state is conveyed by opacity/color rather
- * than a text label, with the label surfacing as a hover tooltip instead. */
+ * than a text label, with the label surfacing as a hover tooltip instead.
+ * The icon itself is drawn with a CSS mask (same technique as .copy-id)
+ * rather than a hardcoded-color SVG data URI `background-image`, so its
+ * color follows the active theme (`--fg-muted` unread / `--accent` read)
+ * instead of being frozen to the Moon theme's original hex values. */
 .mark-read-button {
   width: 1.7rem;
   height: 1.7rem;
   padding: 0;
+  position: relative;
   background-color: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
   font-size: 0; /* hides the literal label visually only — it stays in the
                    DOM as the button's accessible name */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b8fb0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 0.95rem;
   opacity: 0.55;
   transition: border-color var(--transition), opacity var(--transition);
+}
+
+.mark-read-button::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: var(--fg-muted);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 0.95rem;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 0.95rem;
+  transition: background-color var(--transition);
 }
 
 .mark-read-button:hover {
@@ -721,8 +739,11 @@ span.broken-link {
 }
 
 .mark-read-button[aria-pressed="true"] {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f2c879' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
   opacity: 0.85;
+}
+
+.mark-read-button[aria-pressed="true"]::before {
+  background-color: var(--accent);
 }
 
 .mark-read-button:disabled {
