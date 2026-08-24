@@ -19,6 +19,7 @@
  */
 import * as PIXI from "./pixi.min.mjs";
 import { filterEntries } from "./filter.mjs";
+import { getStatusSnapshot } from "./exploration.mjs";
 
 // Color palette mirrors site.css's design tokens (`--accent`, `--nebula`,
 // `--border`, `--fg`) so the Graph UI feels visually continuous with the
@@ -28,6 +29,7 @@ import { filterEntries } from "./filter.mjs";
 const ACCENT = 0xf2c879; // starlight gold, matches --accent
 const EDGE_COLOR = 0x1d2044; // matches --border
 const PARTICLE_COLOR = 0xeae8f2; // matches --fg
+const EXPLORED_COLOR = 0x8b8fb0; // matches --fg-muted; used to dim/desaturate "read" notes (REQ-EXPLORE-005)
 const LABEL_PRIMARY_COLOR = 0xeae8f2; // matches --fg, achromatic (no accent hue)
 const LABEL_NEIGHBOR_COLOR = 0x8b8fb0; // matches --fg-muted, achromatic
 
@@ -172,6 +174,41 @@ async function main() {
     nodesLayer.addChild(star);
     starById.set(node.id, star);
   }
+
+  // Exploration status (REQ-EXPLORE-005): notes marked "read" (tracked
+  // entirely client-side in localStorage by exploration.mjs) render as
+  // dimmed/desaturated stars, and the energy particles they emit are
+  // dimmed to match — never colored/persisted server-side, and looked up
+  // purely by id so it's unaffected by which nodes/edges currently exist
+  // (REQ-EXPLORE-004).
+  let exploredIds = new Set(
+    [...getStatusSnapshot()].filter(([, status]) => status === "read").map(([id]) => id),
+  );
+
+  function applyExploration() {
+    for (const node of graph.nodes) {
+      const star = starById.get(node.id);
+      if (!star) continue;
+      const degree = degreeById.get(node.id) ?? 0;
+      const radius = MIN_NODE_RADIUS + (MAX_NODE_RADIUS - MIN_NODE_RADIUS) * Math.sqrt(degree / maxDegree);
+      const isExplored = exploredIds.has(node.id);
+      star.clear();
+      star.circle(0, 0, radius).fill({ color: isExplored ? EXPLORED_COLOR : ACCENT, alpha: isExplored ? 0.5 : 0.95 });
+    }
+    for (const particle of particles) {
+      const isExplored = exploredIds.has(particle.source.id);
+      particle.dot.clear();
+      particle.dot.circle(0, 0, 1.5).fill({ color: isExplored ? EXPLORED_COLOR : PARTICLE_COLOR, alpha: isExplored ? 0.4 : 0.9 });
+    }
+  }
+  applyExploration();
+
+  window.addEventListener("enastro:exploration-changed", (event) => {
+    exploredIds = new Set(
+      [...event.detail.statusById].filter(([, status]) => status === "read").map(([id]) => id),
+    );
+    applyExploration();
+  });
 
   // Hover titles are rendered as floating labels next to each relevant node
   // (rather than aggregated in the bottom-left status bar), in screen space
@@ -424,6 +461,12 @@ async function main() {
         x: world.position.x + node.x * world.scale.x,
         y: world.position.y + node.y * world.scale.y,
       };
+    },
+    // Exploration status (REQ-EXPLORE-005), for E2E test instrumentation
+    // (see src/e2e/exploration.e2e.test.ts) — dimming is only visible as a
+    // rendered fill color, which pixel inspection would make brittle.
+    isExplored(id) {
+      return exploredIds.has(id);
     },
   };
 

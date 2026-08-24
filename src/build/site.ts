@@ -26,6 +26,7 @@ const CLIENT_ASSET_FILENAMES = [
   "local-time.mjs",
   "site.css",
   "graph-view.mjs",
+  "exploration.mjs",
 ];
 
 // pixi.js (WebGL renderer, ADR-0010) is vendored as a single self-contained

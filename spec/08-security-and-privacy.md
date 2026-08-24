@@ -34,3 +34,9 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 
 - 悪意ある vault 所有者（自分自身）を脅威主体に含めるかは OPEN（通常は含めない前提だが明記が必要）。
 - 公開後の静的サイトに対する外部からの攻撃（例: 第三者が生成物を改ざんして再配布する）は本プロジェクトの直接のスコープ外とし、配布経路（GitHub Pages 等）のセキュリティに委ねる。
+
+## 6. クライアント側ローカル状態（探索ステータス）[DECIDED]
+
+- 「探索ステータス」（ノートごとの既読/未読、REQ-EXPLORE-001〜006、[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md)）は、閲覧者のブラウザの `localStorage` にのみ保存されるクライアント完結の状態であり、build 時にもサーバー側にも一切送信・保存されない。
+- この状態は `graph.json` / `search-index.json` / 生成 HTML を含むいかなる公開 artifact にも書き込まれない（REQ-EXPLORE-006）。privacy invariant（§1）は非公開ノートの漏洩を対象としており、この探索ステータス機能は同invariant に抵触しないことを、既存の privacy scan（§4）と同種の考え方で確認する。
+

@@ -64,6 +64,7 @@ minimal Markdown vault
 - `SEC`: security / privacy invariant
 - `BUILD`: artifact / build の決定性・契約
 - `PERF`: 性能
+- `EXPLORE`: 閲覧者ローカルの探索ステータス（既読管理・rewind）
 
 ### 4.1 PUB
 
@@ -147,6 +148,17 @@ minimal Markdown vault
 | REQ-OPS-002 | `main` ブランチへの push を契機に、本リポジトリのデモ vault をビルドし GitHub Pages に自動デプロイする **MUST**（[ADR-0013](../decisions/ADR-0013-ci-github-pages-pipeline-scope.md)。GitHub 公式 action のみ使用）。 | DECIDED |
 | REQ-OPS-003 | エンドユーザーが自分の vault を自分の GitHub Pages に公開するための再利用可能な workflow テンプレートを文書として提供する **SHOULD**（REQ-PUB-008 とは別物、自動ミラーリングは伴わない）。 | DECIDED |
 
+### 4.9 EXPLORE
+
+| ID | 要件 | Status |
+|---|---|---|
+| REQ-EXPLORE-001 | 閲覧者はノートごとに「未読」「既読」の2値ステータスを持つ **MUST**。既読化はノートページ上の手動ボタン（Mark as read）操作でのみ発火し、スクロール検知等による自動既読は行わない **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md)）。 | DECIDED |
+| REQ-EXPLORE-002 | ステータスはブラウザの `localStorage` にのみ保存され、`localStorage.setItem` が失敗(ストレージ上限超過等)した場合は、その場で閲覧者に警告を表示する **MUST**。警告発生時も、その場のページ表示上は変更を即時反映してよいが、リロード後に保存されない場合がある旨を示す **SHOULD**。 | DECIDED |
+| REQ-EXPLORE-003 | 保存されたステータス変更は追記型のイベントログとして記録され、閲覧者は任意の過去時点まで表示を巻き戻す（rewind）ことができる **MUST**。rewind はログを削除せず、閲覧用のカーソル移動として扱う **MUST**。rewind 中は新たなステータス変更操作を無効化する **MUST**。 | DECIDED |
+| REQ-EXPLORE-004 | 探索ステータスはノート ID をキーに管理され、グラフのトポロジー変化（ノード/エッジの増減）の影響を受けない **MUST**。存在しなくなった ID のステータスは単に参照されず、新規 ID は未読として扱われる **MUST**。 | DECIDED |
+| REQ-EXPLORE-005 | 既読ノートについて、一覧ページのビュレット、グラフ UI 上の当該ノード、当該ノードを起点とするエネルギー粒子が減光・無彩色化して表示される **MUST**。 | DECIDED |
+| REQ-EXPLORE-006 | 探索ステータスはいかなるビルド成果物（`graph.json`, `search-index.json`, 生成 HTML）にも一切書き込まれない **MUST**（[08-security-and-privacy.md](08-security-and-privacy.md) の privacy invariant と整合）。 | DECIDED |
+
 ## 5. Traceability 表
 
 | Product goal | Requirement | Architecture / ADR | Acceptance | Fixture |
@@ -190,6 +202,12 @@ minimal Markdown vault
 | 02: CI typecheck/test | REQ-OPS-001 | ADR-0013 | 09 §2.6 | - |
 | 02: GitHub Pages 自動デプロイ | REQ-OPS-002 | ADR-0013 | 09 §2.6 | fixtures/demo-vault |
 | 02: 再利用可能な公開テンプレート | REQ-OPS-003 | ADR-0013 | 09 §2.6 | - |
+| 02: 探索ステータス（既読/未読）の記録 | REQ-EXPLORE-001 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
+| 02: ストレージ上限警告 | REQ-EXPLORE-002 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
+| 02: rewind（イベントログ + カーソル） | REQ-EXPLORE-003 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
+| 02: トポロジー変化耐性 | REQ-EXPLORE-004 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
+| 02: 探索ステータスのスタイル反映 | REQ-EXPLORE-005 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
+| 02: 公開 artifact への非漏洩 | REQ-EXPLORE-006, REQ-SEC-001 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
 本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。

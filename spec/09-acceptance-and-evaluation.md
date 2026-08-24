@@ -77,6 +77,8 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 | REQ-OPS-001 | human review（CI ワークフロー（`.github/workflows/ci.yml`）が push/pull request で typecheck・test を実行することの確認。ワークフロー自体を検証する自動テストは持たない） | - |
 | REQ-OPS-002 | human review（`.github/workflows/deploy-demo.yml` によるデモサイトの GitHub Pages 自動公開の動作確認） | demo-vault |
 | REQ-OPS-003 | human review（README のテンプレート workflow が記載通りに動作することの確認。enastro 自身のテストではエンドユーザー環境を再現しない） | - |
+| REQ-EXPLORE-001〜005 | unit test（`src/render/client/exploration.test.ts`、ログ計算・rewind・quota捕捉）+ browser E2E test（`src/e2e/exploration.e2e.test.ts`、Mark as read・index/graph の減光・rewind・ストレージ警告） | basic-vault |
+| REQ-EXPLORE-006 | privacy scan 相当の確認（既存の `site.privacy.test.ts` 等を再実行し、`graph.json`/`search-index.json`/生成 HTML に既読情報が含まれないことを確認） | basic-vault |
 
 ## 3. 引き続き自動検証を実施しない項目 [DEFERRED]
 
