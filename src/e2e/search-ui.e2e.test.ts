@@ -123,8 +123,9 @@ describe("browser E2E: local-timezone last-modified display (REQ-UX-007)", () =>
       await jstPage.goto(`${baseUrl}/notes/note-a.html`);
 
       await expect
-        .poll(() => jstPage.locator("p.modified").textContent())
-        .toMatch(/Last modified: \d{4}-\d{2}-\d{2} \d{2}:\d{2} \(UTC\+09:00\)/);
+        .poll(() => jstPage.locator(".date-value[data-modified]").textContent())
+        .toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+      await expect.poll(() => jstPage.locator(".date-tz").textContent()).toBe("UTC+9");
     } finally {
       await jstPage.close();
       await context.close();

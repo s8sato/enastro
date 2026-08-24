@@ -74,8 +74,8 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <body>
 <nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a></nav>
 ${renderExplorationBar("../assets/", "../")}
-<p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span> <button type="button" class="mark-read-button" data-mark-read="${escapeHtml(node.id)}" hidden>Mark as read</button><span class="read-at" data-read-at hidden></span></p>
-<p class="modified" data-modified="${modifiedAtEpochMs}">Last modified: ${escapeHtml(modifiedAt)}</p>
+<p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span> <button type="button" class="mark-read-button" data-mark-read="${escapeHtml(node.id)}" title="Mark as read" hidden>Mark as read</button></p>
+<p class="note-dates"><span class="date-group"><span class="date-label">Updated</span> <span class="date-value" data-modified="${modifiedAtEpochMs}">${escapeHtml(modifiedAt)}</span></span><span class="date-sep" data-read-sep hidden>·</span><span class="date-group" data-read-at hidden><span class="date-label">Read</span> <span class="date-value" data-read-value></span></span><span class="date-tz" data-tz></span></p>
 ${tagsHtml}
 <article>${bodyHtml}</article>
 ${backlinksHtml}

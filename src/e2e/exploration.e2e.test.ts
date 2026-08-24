@@ -199,7 +199,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     await markReadButton.click();
     await expect.poll(() => readAt.isVisible()).toBe(true);
-    expect(await readAt.textContent()).toMatch(/^Read: /);
+    expect(await readAt.textContent()).toMatch(/^Read /);
 
     await markReadButton.click();
     await expect.poll(() => readAt.isHidden()).toBe(true);

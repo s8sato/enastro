@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatLocalTimestamp } from "./format-local-time.mjs";
+import { formatLocalDateOnly, formatLocalTimestamp, formatTzAbbrev } from "./format-local-time.mjs";
 
 describe("formatLocalTimestamp (REQ-UX-007)", () => {
   it("formats with a zero offset (UTC) the same as the fixed-UTC formatter, plus an explicit offset suffix", () => {
@@ -42,5 +42,29 @@ describe("formatLocalTimestamp (REQ-UX-007)", () => {
     expect(formatLocalTimestamp(Date.UTC(2026, 0, 2, 3, 4, 0), 0)).toBe(
       "2026-01-02 03:04 (UTC+00:00)",
     );
+  });
+});
+
+describe("formatLocalDateOnly (Updated/Read line, no per-value tz suffix)", () => {
+  it("omits the timezone suffix that formatLocalTimestamp includes", () => {
+    expect(formatLocalDateOnly(Date.UTC(2026, 7, 23, 12, 34, 56), 540)).toBe("2026-08-23 21:34");
+  });
+});
+
+describe("formatTzAbbrev (single trailing timezone badge)", () => {
+  it("formats a whole-hour offset without a minutes component", () => {
+    expect(formatTzAbbrev(540)).toBe("UTC+9");
+  });
+
+  it("formats a negative whole-hour offset", () => {
+    expect(formatTzAbbrev(-300)).toBe("UTC-5");
+  });
+
+  it("formats a half-hour offset with the minutes component", () => {
+    expect(formatTzAbbrev(330)).toBe("UTC+5:30");
+  });
+
+  it("formats UTC itself", () => {
+    expect(formatTzAbbrev(0)).toBe("UTC+0");
   });
 });

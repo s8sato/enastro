@@ -282,9 +282,9 @@ article th {
   font-weight: 600;
 }
 
-/* Note id, styled as a catalog designation plate rather than a raw code
-   string — bracket ornaments via generated content, wide tracking, small
-   caps rhythm. */
+/* Note id: a flat, globally-unique identifier — not a hierarchical path,
+ * so it must not look like a breadcrumb, and not like a tag pill either
+ * (ul.tags li a). Plain monospace text, no border/background. */
 .note-id {
   display: flex;
   align-items: center;
@@ -292,7 +292,7 @@ article th {
   font-family: var(--font-mono);
   color: var(--fg-muted);
   font-size: 0.85rem;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   margin: 1.25rem auto 0;
   max-width: 42rem;
   padding: 0 1.25rem;
@@ -300,16 +300,6 @@ article th {
 
 .note-id code {
   color: var(--nebula);
-}
-
-.note-id code::before {
-  content: "⟨ ";
-  color: var(--border);
-}
-
-.note-id code::after {
-  content: " ⟩";
-  color: var(--border);
 }
 
 .copy-id {
@@ -345,12 +335,55 @@ article th {
   opacity: 1;
 }
 
-.modified {
-  color: var(--fg-muted);
-  font-size: 0.82rem;
+/* Updated/Read date line: both timestamps share one monospace row so
+ * their fonts/sizes never drift apart, and the timezone is shown once at
+ * the end of the line (`.date-tz`) instead of being repeated after every
+ * single value. "Updated" (build-time last-modified) is always shown;
+ * "Read" only appears while the note is marked read. */
+.note-dates {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
   max-width: 42rem;
   margin: 0.35rem auto 0;
   padding: 0 1.25rem;
+}
+
+.date-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+/* `.date-group`'s `display: flex` would otherwise override the `hidden`
+ * attribute's UA-stylesheet `display: none` (same specificity, author
+ * rule wins) — restore it explicitly so the Read date-group can actually
+ * be hidden while unread. */
+.date-group[hidden] {
+  display: none;
+}
+
+.date-label {
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+
+.date-value {
+  color: var(--fg-muted);
+}
+
+.date-sep {
+  color: var(--border);
+}
+
+.date-tz {
+  margin-left: auto;
+  color: var(--fg-muted);
+  opacity: 0.7;
 }
 
 ul.tags {
@@ -545,42 +578,41 @@ span.broken-link {
   color: var(--fg-muted);
 }
 
-/* Shared "Mark as read" toggle button on note pages. */
+/* Shared "Mark as read" toggle button on note pages — icon-only (same
+ * visually-hidden-label technique as .copy-id) so it doesn't compete with
+ * the note id for attention; state is conveyed by opacity/color rather
+ * than a text label, with the label surfacing as a hover tooltip instead. */
 .mark-read-button {
-  padding: 0.25rem 0.7rem;
-  background: var(--bg-elevated);
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  background-color: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  color: var(--fg-muted);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
   cursor: pointer;
-  transition: border-color var(--transition), color var(--transition);
+  font-size: 0; /* hides the literal label visually only — it stays in the
+                   DOM as the button's accessible name */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b8fb0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0.95rem;
+  opacity: 0.55;
+  transition: border-color var(--transition), opacity var(--transition);
 }
 
 .mark-read-button:hover {
   border-color: var(--accent-dim);
-  color: var(--fg);
+  opacity: 1;
 }
 
 .mark-read-button[aria-pressed="true"] {
-  color: var(--fg-muted);
-  border-color: var(--border-soft);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f2c879' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+  opacity: 0.85;
 }
 
 .mark-read-button:disabled {
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
-}
-
-/* Read-at timestamp (REQ-EXPLORE-007-adjacent UX): its presence/absence is
- * itself the at-a-glance read/unread cue on note pages, so no separate
- * button styling is needed. */
-.read-at {
-  margin-left: 0.5rem;
-  color: var(--fg-muted);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
 }
 
 /* Exploration rewind bar (REQ-EXPLORE-003), shared across all three page
@@ -780,7 +812,7 @@ span.broken-link {
   }
 
   .note-id,
-  .modified,
+  .note-dates,
   ul.tags {
     padding: 0 1rem;
   }

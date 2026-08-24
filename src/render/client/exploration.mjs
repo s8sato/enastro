@@ -32,7 +32,7 @@
  * DOM-wiring code below is responsible for persisting their result and
  * requires an explicit confirmation before doing so.
  */
-import { formatLocalTimestamp } from "./format-local-time.mjs";
+import { formatLocalDateOnly, formatLocalTimestamp } from "./format-local-time.mjs";
 
 export const STORAGE_KEY = "enastro:exploration:v1";
 
@@ -215,6 +215,8 @@ function main() {
   const autoUnreadNotice = document.getElementById("exploration-auto-unread-notice");
   const markReadButton = document.querySelector("[data-mark-read]");
   const readAtSpan = document.querySelector("[data-read-at]");
+  const readAtValue = readAtSpan?.querySelector("[data-read-value]");
+  const readAtSep = document.querySelector("[data-read-sep]");
 
   function currentCursor() {
     return cursorTs ?? Infinity;
@@ -275,7 +277,12 @@ function main() {
     markReadButton.hidden = false;
     const id = markReadButton.dataset.markRead;
     const isRead = statusById.get(id) === "read";
-    markReadButton.textContent = isRead ? "Mark as unread" : "Mark as read";
+    const label = isRead ? "Mark as unread" : "Mark as read";
+    // The button is styled icon-only (site.css); the text content remains
+    // as its accessible name, and `title` surfaces the same label as a
+    // hover tooltip for sighted mouse users.
+    markReadButton.textContent = label;
+    markReadButton.title = label;
     markReadButton.setAttribute("aria-pressed", String(isRead));
     // Disabled while viewing a past state (REQ-EXPLORE-003): rewinding is
     // read-only, so it can't be mixed with recording new status changes.
@@ -287,10 +294,12 @@ function main() {
     if (readAtSpan) {
       const readAt = isRead ? getLastEventTimestamp(log, id, currentCursor()) : undefined;
       if (readAt !== undefined) {
-        readAtSpan.textContent = `Read: ${formatLocalTimestamp(readAt, offsetMinutes)}`;
+        if (readAtValue) readAtValue.textContent = formatLocalDateOnly(readAt, offsetMinutes);
         readAtSpan.hidden = false;
+        if (readAtSep) readAtSep.hidden = false;
       } else {
         readAtSpan.hidden = true;
+        if (readAtSep) readAtSep.hidden = true;
       }
     }
   }
