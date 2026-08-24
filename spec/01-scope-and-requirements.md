@@ -113,7 +113,7 @@ minimal Markdown vault
 | REQ-UX-004 | 出力は静的ホスティング可能でサーバーサイド runtime 不要な portable artifact である **MUST**。 | DECIDED |
 | REQ-UX-005 | v0.1 の主画面はノート/ドキュメントビューであり、Graph UI は主画面にしない。長期的には Graph UI を主画面に据える方針。 | DECIDED（方向性）/ OPEN（詳細 UX） |
 | REQ-UX-006 | ノートページには一覧ページ（`index.html`）へのナビゲーションリンクを常に表示する **SHOULD**。 | DECIDED |
-| REQ-UX-007 | ノートページには ID の近くに最終更新日時（ファイルの mtime 由来）を表示し、検索対象に含める **SHOULD**。ビルドの決定性（REQ-BUILD-001）を保つため、静的 HTML には UTC 表示をフォールバックとして埋め込み、閲覧者のブラウザ上で JavaScript により閲覧者のローカルタイムゾーンでの表示に強化する。作成日時は取得元の信頼性の問題（filesystem birthtime の非対応・git checkout によるリセット）から v0.1 では対象外とする。 | DECIDED |
+| REQ-UX-007 | ノートページには ID の近くに最終更新日時（そのファイルを最後に変更した git コミットの日時。git 情報が得られない場合は「不明」として扱い非表示・検索対象外とする。mtime へのフォールバックは行わない、[ADR-0015](../decisions/ADR-0015-note-modified-at-source.md)）を表示し、検索対象に含める **SHOULD**。ビルドの決定性（REQ-BUILD-001）を保つため、静的 HTML には UTC 表示をフォールバックとして埋め込み、閲覧者のブラウザ上で JavaScript により閲覧者のローカルタイムゾーンでの表示に強化する。作成日時は取得元の信頼性の問題（filesystem birthtime の非対応・git checkout によるリセット）から v0.1 では対象外とする。 | DECIDED |
 | REQ-UX-008 | ノートページの `#tag` はリンクとして表示され、クリックすると一覧ページ（`index.html`）の対応するタグでフィルタされた表示に遷移する **SHOULD**。 | DECIDED |
 | REQ-UX-009 | Graph UI ページ（`graph.html`）をノート一覧・ノートページから相互にリンクできる副画面として提供する **MUST**（[ADR-0011](../decisions/ADR-0011-graph-ui-placement.md)）。 | DECIDED |
 | REQ-UX-010 | 出力は PC・モバイル両方でレスポンシブなレイアウトを提供し、Graph UI は touch による pan/zoom 操作をサポートする **MUST**。WCAG 準拠等の包括的 accessibility 対応は対象外（引き続き DEFERRED）。 | DECIDED |
@@ -159,7 +159,7 @@ minimal Markdown vault
 | REQ-EXPLORE-004 | 探索ステータスはノート ID をキーに管理され、グラフのトポロジー変化（ノード/エッジの増減）の影響を受けない **MUST**。存在しなくなった ID のステータスは単に参照されず、新規 ID は未読として扱われる **MUST**。 | DECIDED |
 | REQ-EXPLORE-005 | 既読ノートについて、一覧ページのビュレット、グラフ UI 上の当該ノード、当該ノードを起点とするエネルギー粒子が減光・無彩色化して表示される **MUST**。 | DECIDED |
 | REQ-EXPLORE-006 | 探索ステータスはいかなるビルド成果物（`graph.json`, `search-index.json`, 生成 HTML）にも一切書き込まれない **MUST**（[08-security-and-privacy.md](08-security-and-privacy.md) の privacy invariant と整合）。 | DECIDED |
-| REQ-EXPLORE-007 | サイト読み込み時、探索ログに登場するノート ID が現在の公開ノート一覧（`search-index.json`）に存在しない場合、閲覧者に通知する **SHOULD**。また、既読状態のノートについて、その既読イベントの記録時刻より当該ノートの最終更新日時（`search-index.json` の `modifiedAt`）が新しい場合、自動的に未読イベントを追記し、その旨を通知する **SHOULD**。この2つの通知は原因が異なるため独立した別々の枠に表示し、件数ではなく対象ノート ID を列挙する **SHOULD**。いずれもフェッチ失敗時（オフライン等）は同期機能のみを黙ってスキップし、他の探索ステータス機能に影響しない **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂）。 | DECIDED |
+| REQ-EXPLORE-007 | サイト読み込み時、探索ログに登場するノート ID が現在の公開ノート一覧（`search-index.json`）に存在しない場合、閲覧者に通知する **SHOULD**。また、既読状態のノートについて、その既読イベントの記録時刻より当該ノートの最終更新日時（`search-index.json` の `modifiedAt`。その情報源は REQ-UX-007、[ADR-0015](../decisions/ADR-0015-note-modified-at-source.md)）が新しい場合、自動的に未読イベントを追記し、その旨を通知する **SHOULD**。この2つの通知は原因が異なるため独立した別々の枠に表示し、件数ではなく対象ノート ID を列挙する **SHOULD**。いずれもフェッチ失敗時（オフライン等）は同期機能のみを黙ってスキップし、他の探索ステータス機能に影響しない **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂）。 | DECIDED |
 | REQ-EXPLORE-008 | 閲覧者は rewind 中のカーソル位置を対象に、次の2つの明示的・破壊的操作を実行できる **MAY**: (a) "Reset to here" — カーソル時点以前（`ts <= T`）の履歴は保持したまま、カーソル時点より後（`ts > T`）の履歴を永続的に削除する（`git reset --hard` 相当。履歴の集約・書き換えは行わない）。(b) "Prune until here" — カーソル時点までの範囲で正味の変化がない read/unread の往復を削除する。いずれも実行前に確認を要求し、rewind 自体（閲覧専用、REQ-EXPLORE-003）とは明確に区別される **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂）。 | DECIDED |
 
 ## 5. Traceability 表
@@ -195,7 +195,7 @@ minimal Markdown vault
 | 00: portable static artifact | REQ-UX-004 | (build 実装) | 09 §2.5 | fixtures/basic-vault |
 | 00: ノート/ドキュメントビューが主画面 | REQ-UX-005 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
 | 00: 一覧ページへのナビゲーション | REQ-UX-006 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
-| 00: 最終更新日時の表示・検索対象化 | REQ-UX-007 | (render/build 実装) | 09 §2.5 | fixtures/basic-vault |
+| 00: 最終更新日時の表示・検索対象化 | REQ-UX-007 | (render/build 実装), ADR-0015 | 09 §2.5 | fixtures/basic-vault |
 | 00: タグのフィルタリンク化 | REQ-UX-008 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
 | 02: Graph UI レンダリング | REQ-GRAPH-004 | ADR-0010, ADR-0011 | 09 §2.6 | fixtures/demo-vault, fixtures/benchmark-vault |
 | 02: layout 事前計算/実行時ハイブリッド | REQ-GRAPH-005 | ADR-0006, ADR-0010 | 09 §2.6 | fixtures/benchmark-vault |
@@ -211,7 +211,7 @@ minimal Markdown vault
 | 02: トポロジー変化耐性 | REQ-EXPLORE-004 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 02: 探索ステータスのスタイル反映 | REQ-EXPLORE-005 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 02: 公開 artifact への非漏洩 | REQ-EXPLORE-006, REQ-SEC-001 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
-| 02: ID不一致通知・自動unread同期 | REQ-EXPLORE-007 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
+| 02: ID不一致通知・自動unread同期 | REQ-EXPLORE-007 | ADR-0014, ADR-0015 | 09 §2.6 | fixtures/basic-vault |
 | 02: Reset to here / Prune until here | REQ-EXPLORE-008 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 03: 12色テーマ切り替え | REQ-UX-011 | (render/client 実装、ADR-0014 の localStorage 完結パターンを踏襲) | 09 §2.6 | fixtures/basic-vault |
 

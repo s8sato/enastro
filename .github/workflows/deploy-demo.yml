@@ -31,6 +31,12 @@ jobs:
       # (supply chain hardening — see ci.yml for the rationale). Dependabot
       # (.github/dependabot.yml) keeps these pins up to date.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Full history (not the default shallow depth-1 clone) so that
+          # each fixture note's displayed "Updated" date reflects its own
+          # real last-commit date rather than being coarsened to this
+          # repo's single most recent commit (REQ-UX-007, ADR-0015).
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22

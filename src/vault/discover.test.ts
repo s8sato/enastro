@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -21,7 +22,7 @@ describe("discoverVault", () => {
     const files = discoverVault(vaultDir);
 
     expect(files).toEqual([
-      { id: "note-a", filePath: expect.any(String), raw: "# Note A", modifiedAt: expect.any(Number) },
+      { id: "note-a", filePath: expect.any(String), raw: "# Note A", modifiedAt: 0 },
     ]);
   });
 
@@ -43,5 +44,31 @@ describe("discoverVault", () => {
     writeFileSync(path.join(vaultDir, "note-b.md"), "b");
 
     expect(() => discoverVault(vaultDir)).not.toThrow();
+  });
+
+  // ADR-0015: modifiedAt is sourced *only* from git commit history; `0`
+  // (the UNIX epoch, used as an "unknown" sentinel) is the outcome when
+  // it isn't available (see git-modified-at.test.ts for the underlying
+  // helper's own coverage). The 3 tests above (plain, non-git temp dirs)
+  // already cover that fallback path; this covers the git-based primary
+  // path end-to-end through discoverVault itself.
+  it("sources modifiedAt from git commit history when the vault is a git repository", () => {
+    vaultDir = mkdtempSync(path.join(tmpdir(), "enastro-discover-"));
+    execFileSync("git", ["init", "--initial-branch=main"], { cwd: vaultDir });
+    execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: vaultDir });
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: vaultDir });
+    writeFileSync(path.join(vaultDir, "note-a.md"), "a");
+    const isoDate = "2020-01-01T00:00:00Z";
+    execFileSync("git", ["add", "note-a.md"], { cwd: vaultDir });
+    execFileSync("git", ["commit", "-m", "add note-a"], {
+      cwd: vaultDir,
+      env: { ...process.env, GIT_AUTHOR_DATE: isoDate, GIT_COMMITTER_DATE: isoDate },
+    });
+
+    const files = discoverVault(vaultDir);
+
+    expect(files).toEqual([
+      { id: "note-a", filePath: expect.any(String), raw: "a", modifiedAt: Date.parse(isoDate) },
+    ]);
   });
 });

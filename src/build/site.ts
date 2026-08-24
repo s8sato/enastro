@@ -99,7 +99,11 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
     const body = bodyById.get(node.id) ?? "";
     const { html: bodyHtml } = renderNoteBody(body, graph, { attachments, publishedAttachmentIds });
     const modifiedAtEpochMs = modifiedAtById.get(node.id) ?? 0;
-    const modifiedAt = formatTimestamp(modifiedAtEpochMs);
+    // `0` is the "unknown" sentinel (ADR-0015: no git history for this
+    // note, mtime is never used as a fallback) — in that case the
+    // formatted timestamp is omitted entirely, rather than rendering the
+    // UNIX epoch as if it were a real date.
+    const modifiedAt = modifiedAtEpochMs > 0 ? formatTimestamp(modifiedAtEpochMs) : undefined;
 
     const backlinkNodes = [
       ...new Map(

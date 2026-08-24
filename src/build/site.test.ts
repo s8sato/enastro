@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -109,6 +109,32 @@ describe("buildSite (fixtures/basic-vault)", () => {
     const searchIndex = JSON.parse(readFileSync(path.join(outDir, "search-index.json"), "utf-8"));
     for (const entry of searchIndex) {
       expect(entry.modifiedAt).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC$/);
+    }
+  });
+
+  // ADR-0015: when a note's last-modified date can't be determined from
+  // git history (here: a fresh, non-git temp vault), `modifiedAt` is
+  // "unknown" rather than falling back to filesystem mtime. This must be
+  // surfaced as an *absence* (no "Updated" line, no `modifiedAt` key in
+  // search-index.json) rather than a placeholder/incorrect date.
+  it("omits the 'Updated' line and the search-index modifiedAt field when the vault has no git history", () => {
+    const nonGitVaultDir = mkdtempSync(path.join(tmpdir(), "enastro-site-nongit-vault-"));
+    writeFileSync(path.join(nonGitVaultDir, "note-a.md"), "---\npublish: true\n---\n# Note A\n\nBody.");
+    outDir = mkdtempSync(path.join(tmpdir(), "enastro-site-nongit-out-"));
+
+    try {
+      buildSite(nonGitVaultDir, outDir);
+
+      const noteA = readFileSync(path.join(outDir, "notes", "note-a.html"), "utf-8");
+      expect(noteA).not.toContain("data-modified");
+      expect(noteA).not.toContain("Updated");
+      expect(noteA).toContain('<p class="note-dates">');
+
+      const searchIndex = JSON.parse(readFileSync(path.join(outDir, "search-index.json"), "utf-8"));
+      expect(searchIndex).toHaveLength(1);
+      expect("modifiedAt" in searchIndex[0]).toBe(false);
+    } finally {
+      rmSync(nonGitVaultDir, { recursive: true, force: true });
     }
   });
 });

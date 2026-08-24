@@ -232,4 +232,10 @@ describe("parseModifiedAt (search-index.json sync, REQ-EXPLORE-006/007)", () => 
   it("returns undefined for an unparseable string", () => {
     expect(parseModifiedAt("not a date")).toBeUndefined();
   });
+
+  it("returns undefined without throwing when modifiedAt is missing (unknown, ADR-0015)", () => {
+    // search-index.json entries omit `modifiedAt` entirely for notes with
+    // no git history, rather than serializing a stray `null`/placeholder.
+    expect(parseModifiedAt(undefined)).toBeUndefined();
+  });
 });

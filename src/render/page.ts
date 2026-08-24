@@ -9,11 +9,15 @@ export interface RenderNotePageParams {
    * "2026-08-23 12:34 UTC". Baked in as a fixed UTC string so the build
    * stays deterministic (REQ-BUILD-001); `local-time.mjs` progressively
    * enhances this into the *viewer's* local timezone client-side. Not part
-   * of `PublicNode`/`graph.json` (see `GraphNode.modifiedAt`'s doc comment). */
-  modifiedAt: string;
+   * of `PublicNode`/`graph.json` (see `GraphNode.modifiedAt`'s doc comment).
+   * `undefined` means the note's last-modified date is unknown (no git
+   * history for it, ADR-0015) — in that case the whole "Updated" line is
+   * omitted rather than showing a placeholder or fallback date. */
+  modifiedAt: string | undefined;
   /** The same timestamp as `modifiedAt`, as raw epoch milliseconds, so
-   * `local-time.mjs` can recompute it in the viewer's local timezone. */
-  modifiedAtEpochMs: number;
+   * `local-time.mjs` can recompute it in the viewer's local timezone.
+   * `undefined` iff `modifiedAt` is. */
+  modifiedAtEpochMs: number | undefined;
 }
 
 /**
@@ -94,6 +98,14 @@ export function renderNotePage(params: RenderNotePageParams): string {
         .join("")}</ul></section>`
     : "";
 
+  // Omitted entirely (not just blank) when unknown (ADR-0015: no git
+  // history for this note) — showing no date is preferable to showing a
+  // placeholder or a stale/incorrect one.
+  const updatedHtml =
+    modifiedAt !== undefined
+      ? `<span class="date-group"><span class="date-label">Updated</span> <span class="date-value" data-modified="${modifiedAtEpochMs}">${escapeHtml(modifiedAt)}</span></span>`
+      : "";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -108,7 +120,7 @@ ${THEME_FOUC_SCRIPT}
 ${renderExplorationBar("../assets/", "../")}
 ${renderThemeSwitcher("../assets/")}
 <p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span> <button type="button" class="mark-read-button" data-mark-read="${escapeHtml(node.id)}" title="Mark as read" hidden>Mark as read</button></p>
-<p class="note-dates"><span class="date-group"><span class="date-label">Updated</span> <span class="date-value" data-modified="${modifiedAtEpochMs}">${escapeHtml(modifiedAt)}</span></span><span class="date-sep" data-read-sep hidden>·</span><span class="date-group" data-read-at hidden><span class="date-label">Read</span> <span class="date-value" data-read-value></span></span><span class="date-tz" data-tz></span></p>
+<p class="note-dates">${updatedHtml}<span class="date-sep" data-read-sep hidden>·</span><span class="date-group" data-read-at hidden><span class="date-label">Read</span> <span class="date-value" data-read-value></span></span><span class="date-tz" data-tz></span></p>
 ${tagsHtml}
 <article>${bodyHtml}</article>
 ${backlinksHtml}

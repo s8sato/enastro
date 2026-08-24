@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { getGitModifiedAtMap } from "./git-modified-at.js";
 
 export interface VaultFile {
   /**
@@ -20,11 +21,19 @@ export interface VaultFile {
   /** Raw file contents. */
   raw: string;
   /**
-   * Last-modified time (`fs.Stat.mtime`), as epoch milliseconds. Used to
-   * display/search a note's last-modified timestamp (REQ-UX-007). Only
-   * `mtime` is captured, not `birthtime` ("created" time): birthtime is
-   * unreliable on many Linux filesystems and gets reset on a fresh git
-   * clone/checkout, so it would not be a meaningful "created" signal.
+   * Last-modified time, as epoch milliseconds. Used to display/search a
+   * note's last-modified timestamp (REQ-UX-007). Sourced *only* from the
+   * date of the most recent git commit that touched this file (see
+   * `getGitModifiedAtMap`). `0` (the UNIX epoch) is used as a sentinel
+   * value meaning "unknown" — when the vault isn't a git repository, `git`
+   * isn't installed, or the file has no commits yet (freshly added,
+   * uncommitted). `fs.Stat.mtime` is deliberately *never* used as a
+   * fallback: it gets reset to "now" on every fresh git clone/checkout
+   * (e.g. CI publish pipelines), which would silently reintroduce the
+   * exact staleness bug this design avoids (see
+   * [ADR-0015](../../decisions/ADR-0015-note-modified-at-source.md)).
+   * Consumers must treat `0` as "unknown" and hide/omit the timestamp
+   * rather than rendering 1970-01-01.
    */
   modifiedAt: number;
 }
@@ -41,6 +50,11 @@ export interface VaultFile {
  */
 export function discoverVault(vaultDir: string): VaultFile[] {
   const files: VaultFile[] = [];
+  // Computed once per build (not per file) so large vaults don't spawn one
+  // `git` process per note (ADR-0015). `null` means git history is
+  // unavailable for the whole vault; every file then gets the `0`
+  // ("unknown") sentinel below — never a filesystem mtime fallback.
+  const gitModifiedAtByPath = getGitModifiedAtMap(vaultDir);
 
   const walk = (dir: string): void => {
     for (const entry of readdirSync(dir)) {
@@ -58,12 +72,14 @@ export function discoverVault(vaultDir: string): VaultFile[] {
 
       const basename = path.basename(entry, ".md");
       const id = basename.normalize("NFC");
+      const relPath = path.relative(vaultDir, fullPath).split(path.sep).join("/");
+      const modifiedAt = gitModifiedAtByPath?.get(relPath) ?? 0;
 
       files.push({
         id,
         filePath: fullPath,
         raw: readFileSync(fullPath, "utf-8"),
-        modifiedAt: stat.mtime.getTime(),
+        modifiedAt,
       });
     }
   };

@@ -29,6 +29,6 @@ export function resetLogAt(log: ExplorationEvent[], cursorTs: number): Explorati
 
 export function pruneLogUntil(log: ExplorationEvent[], cursorTs: number): ExplorationEvent[];
 
-export function parseModifiedAt(formatted: string): number | undefined;
+export function parseModifiedAt(formatted: unknown): number | undefined;
 
 export function getStatusSnapshot(cursorTs?: number): Map<string, string>;

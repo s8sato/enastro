@@ -169,11 +169,16 @@ export function pruneLogUntil(log, cursorTs) {
  * Parses a `search-index.json` entry's `modifiedAt` string (e.g.
  * "2026-08-24 18:24 UTC", see `SearchIndexEntry`) back into epoch
  * milliseconds, for comparison against read-event timestamps
- * (REQ-EXPLORE-007). Returns `undefined` if the string can't be parsed.
- * @param {string} formatted
+ * (REQ-EXPLORE-007). Returns `undefined` if the string can't be parsed, or
+ * if `formatted` isn't a string at all — `modifiedAt` is omitted from a
+ * `search-index.json` entry entirely when the note's last-modified date is
+ * unknown (ADR-0015), so callers naturally skip those notes' staleness
+ * check rather than crashing on `undefined.replace(...)`.
+ * @param {unknown} formatted
  * @returns {number | undefined}
  */
 export function parseModifiedAt(formatted) {
+  if (typeof formatted !== "string") return undefined;
   const iso = formatted.replace(" UTC", "Z").replace(" ", "T");
   const ms = Date.parse(iso);
   return Number.isNaN(ms) ? undefined : ms;
