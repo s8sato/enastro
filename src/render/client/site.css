@@ -698,6 +698,14 @@ span.broken-link {
   border-color: var(--border);
 }
 
+/* The entry currently being viewed via rewind (REQ-EXPLORE-003) — set by
+ * exploration.mjs's renderHistoryList(). */
+#exploration-history-list button.active {
+  color: var(--fg);
+  border-color: var(--accent-dim);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 /* Graph UI (graph.html, REQ-UX-009/010) shell — full-viewport canvas host
  * with a floating nav bar so the WebGL renderer can size to the whole
  * screen while still being reachable from/to the note view. */

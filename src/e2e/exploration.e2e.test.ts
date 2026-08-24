@@ -146,6 +146,48 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     await expect.poll(() => panel.isHidden()).toBe(true);
   });
 
+  it("highlights the history entry currently being viewed via rewind", async () => {
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.evaluate(
+      ({ key }) => {
+        const base = Date.now() - 60_000;
+        localStorage.setItem(
+          key,
+          JSON.stringify([
+            { id: "note-a", status: "read", ts: base + 100 },
+            { id: "note-a", status: "unread", ts: base + 200 },
+            { id: "note-a", status: "read", ts: base + 300 },
+          ]),
+        );
+      },
+      { key: STORAGE_KEY },
+    );
+    await page.reload();
+
+    const markReadButton = page.locator("[data-mark-read]");
+    await expect.poll(() => markReadButton.isVisible()).toBe(true);
+
+    await page.click("#exploration-rewind-toggle");
+    const historyEntries = page.locator("#exploration-history-list button");
+    await expect.poll(() => historyEntries.count()).toBe(3);
+
+    // Live/"now": no entry should be highlighted.
+    for (const entry of await historyEntries.all()) {
+      expect((await entry.getAttribute("class")) ?? "").not.toContain("active");
+    }
+
+    await historyEntries.nth(1).click();
+    await expect.poll(() => historyEntries.nth(1).getAttribute("class")).toContain("active");
+    expect(await historyEntries.nth(1).getAttribute("aria-current")).toBe("true");
+    // Only the rewound-to entry is highlighted, not the others:
+    expect((await historyEntries.first().getAttribute("class")) ?? "").not.toContain("active");
+
+    await page.click("#exploration-return-to-now");
+    for (const entry of await historyEntries.all()) {
+      expect((await entry.getAttribute("class")) ?? "").not.toContain("active");
+    }
+  });
+
   it("shows a read-at timestamp only while the note is read, doubling as the read/unread cue", async () => {
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
     await page.goto(`${baseUrl}/notes/note-c-alias.html`);

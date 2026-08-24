@@ -246,6 +246,15 @@ function main() {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = `${event.status === "read" ? "Read" : "Unread"} · ${event.id} · ${formatEventTime(event.ts, offsetMinutes)}`;
+      // Highlight the entry currently being viewed via rewind (REQ-EXPLORE-003),
+      // so it's obvious which point in history the page is showing. No entry
+      // is highlighted while live (cursorTs === null): "now" isn't any single
+      // logged event.
+      const isActive = cursorTs !== null && event.ts === cursorTs;
+      button.classList.toggle("active", isActive);
+      if (isActive) {
+        button.setAttribute("aria-current", "true");
+      }
       button.addEventListener("click", () => {
         cursorTs = event.ts;
         update();
