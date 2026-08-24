@@ -16,7 +16,7 @@ GitHub Pages のような無料の静的ホスティングにそのまま置く�
 （このデモは [fixtures/demo-vault](fixtures/demo-vault) というサンプル vault を、
 このリポジトリの CI が自動でビルド・公開しているものです。）
 
-### 性能: 10,000 nodes / 50,000 edges（v0.2.1 時点）
+### 性能: 10,000 nodes / 50,000 edges
 
 https://github.com/user-attachments/assets/e0fb3ff7-5b91-43b7-88bb-a117f7adf170
 
@@ -24,11 +24,11 @@ https://github.com/user-attachments/assets/e0fb3ff7-5b91-43b7-88bb-a117f7adf170
 操作を実際に動かしている様子です。計測方法・数値目標との比較は
 [spec/07-performance.md](spec/07-performance.md) を参照してください。
 
-### グラフ画面でのタグによるフィルタリング（v0.2.2）
+### グラフ画面でのタグによるフィルタリング
 
 https://github.com/user-attachments/assets/0ef2ff1e-9df2-4151-b8b4-0b892f08ebc6
 
-Graph view にも All notes ページと同じタグフィルタ UI を追加しました。タグを選択すると、
+Graph view は All notes ページと同じタグフィルタ UI を備えています。タグを選択すると、
 そのタグをすべて持つノート（AND 条件）だけが残り、それ以外のノード・エッジ・エネルギー粒子は
 非表示になります。
 
@@ -229,17 +229,20 @@ Personal Access Token の管理が必要になります。この private → pub
 
 </details>
 
-## v0.1 / v0.2 でできること
+## できること
 
 - Markdown frontmatter（`publish`, タグ相当のフィールド）の解釈
 - wikilink `[[note]]` / alias 付き `[[note|alias]]` / embed `![[note]]` / `#tag` の解釈
 - 非公開ノートへの参照を安全に除去した public projection の生成
 - 添付ファイルは allowlist マークがある場合のみ公開
-- 決定的（deterministic）な静的 artifact の生成（同一入力 → 同一 content-hash）
+- 決定的（deterministic）な静的 artifact の生成(同一入力 → 同一 content-hash)
 - ノートごとの backlink 表示、全文検索、タグによる検索・フィルタリング
 - レスポンシブレイアウト・タッチ操作対応の Graph view（星空グラフ、pan/zoom/pinch/クリック対応、
   タグによるノードフィルタリング）
 - GitHub Actions による CI（typecheck・test）と、GitHub Pages への自動デモ公開
+- ブラウザの `localStorage` に閉じた探索ステータス（既読/未読）の記録、rewind による過去時点の
+  巻き戻し表示、History パネルからの `Reset to here` / `Prune until here`
+- 12種のカラーテーマをクライアント完結で切り替え可能（ビルド成果物には一切書き込まれない）
 
 MCP/CLI query interface などは引き続き対象外です。詳細は
 [spec/01-scope-and-requirements.md](spec/01-scope-and-requirements.md) §3 を参照してください。
