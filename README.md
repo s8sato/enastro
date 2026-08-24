@@ -24,6 +24,14 @@ https://github.com/user-attachments/assets/e0fb3ff7-5b91-43b7-88bb-a117f7adf170
 操作を実際に動かしている様子です。計測方法・数値目標との比較は
 [spec/07-performance.md](spec/07-performance.md) を参照してください。
 
+### グラフ画面でのタグによるフィルタリング（v0.2.2）
+
+https://github.com/user-attachments/assets/0ef2ff1e-9df2-4151-b8b4-0b892f08ebc6
+
+Graph view にも All notes ページと同じタグフィルタ UI を追加しました。タグを選択すると、
+そのタグをすべて持つノート（AND 条件）だけが残り、それ以外のノード・エッジ・エネルギー粒子は
+非表示になります。
+
 ## これは何がうれしいのか
 
 - 手元の Obsidian vault には、人に見せたいノートと、見せたくない下書き・日記・秘密のメモが
@@ -219,7 +227,8 @@ Personal Access Token の管理が必要になります。この private → pub
 - 添付ファイルは allowlist マークがある場合のみ公開
 - 決定的（deterministic）な静的 artifact の生成（同一入力 → 同一 content-hash）
 - ノートごとの backlink 表示、全文検索、タグによる検索・フィルタリング
-- レスポンシブレイアウト・タッチ操作対応の Graph view（星空グラフ、pan/zoom/pinch/クリック対応）
+- レスポンシブレイアウト・タッチ操作対応の Graph view（星空グラフ、pan/zoom/pinch/クリック対応、
+  タグによるノードフィルタリング）
 - GitHub Actions による CI（typecheck・test）と、GitHub Pages への自動デモ公開
 
 MCP/CLI query interface などは引き続き対象外です。詳細は
