@@ -22,7 +22,17 @@
  * plain in-memory UI state, reset to "now" (live) on every navigation/
  * reload, since it is only meant for momentarily reviewing history within
  * the current session.
+ *
+ * Two operations *do* permanently rewrite the log, as an explicit,
+ * user-confirmed exception to the above (ADR-0014, "Reset to here" /
+ * "Prune until here"): `resetLogAt()` actually reverts to the rewound
+ * state by discarding every event *after* the cursor (like `git reset
+ * --hard`), and `pruneLogUntil()` removes no-op (net-unchanged) event
+ * pairs from the range up to the cursor. Both are pure functions; the
+ * DOM-wiring code below is responsible for persisting their result and
+ * requires an explicit confirmation before doing so.
  */
+import { formatLocalTimestamp } from "./format-local-time.mjs";
 
 export const STORAGE_KEY = "enastro:exploration:v1";
 
@@ -78,6 +88,85 @@ export function computeStatusAsOf(log, cursorTs = Infinity) {
   return statusById;
 }
 
+/**
+ * Returns the `ts` of the most recent event for `id` with `ts <= cursorTs`
+ * (chronologically last, regardless of status), or `undefined` if there is
+ * none. When the current status for `id` is "read", this is exactly the
+ * "read at" timestamp for the read/unread indicator on note pages.
+ * @param {{id: string, status: string, ts: number}[]} log
+ * @param {string} id
+ * @param {number} [cursorTs]
+ * @returns {number | undefined}
+ */
+export function getLastEventTimestamp(log, id, cursorTs = Infinity) {
+  let lastTs;
+  for (const event of log) {
+    if (event.ts > cursorTs || event.id !== id) continue;
+    lastTs = event.ts;
+  }
+  return lastTs;
+}
+
+/**
+ * "Reset to here" (ADR-0014): actually reverts to the state as it was at
+ * the rewound cursor, by permanently discarding every event *after*
+ * `cursorTs` (like `git reset --hard`). Events at/before `cursorTs` are
+ * left completely untouched — this does *not* collapse or rewrite past
+ * history, only truncates the future relative to the cursor. This is a
+ * one-way, destructive rewrite of the log — callers (the DOM-wiring code
+ * below) are responsible for requiring explicit user confirmation before
+ * persisting the result.
+ * @param {{id: string, status: string, ts: number}[]} log
+ * @param {number} cursorTs
+ * @returns {{id: string, status: string, ts: number}[]}
+ */
+export function resetLogAt(log, cursorTs) {
+  return log.filter((event) => event.ts <= cursorTs);
+}
+
+/**
+ * "Prune until here" (ADR-0014): removes, from the range `(-∞, cursorTs]`,
+ * any per-id event history that nets out to no change from the implicit
+ * default ("unread", i.e. absent from the log) — a "read"→"unread"
+ * round-trip within that range annihilates entirely. IDs whose net status
+ * within the range is "read" keep only their single last qualifying event;
+ * all earlier events for that id within the range are dropped. Events
+ * after `cursorTs` are untouched. Also a one-way, destructive rewrite; see
+ * `resetLogAt()`'s doc comment for the same caveat.
+ * @param {{id: string, status: string, ts: number}[]} log
+ * @param {number} cursorTs
+ * @returns {{id: string, status: string, ts: number}[]}
+ */
+export function pruneLogUntil(log, cursorTs) {
+  const lastEventByIdInWindow = new Map();
+  for (const event of log) {
+    if (event.ts > cursorTs) continue;
+    lastEventByIdInWindow.set(event.id, event);
+  }
+  const kept = log.filter((event) => event.ts > cursorTs);
+  for (const lastEvent of lastEventByIdInWindow.values()) {
+    if (lastEvent.status === "read") {
+      kept.push(lastEvent);
+    }
+  }
+  kept.sort((a, b) => a.ts - b.ts);
+  return kept;
+}
+
+/**
+ * Parses a `search-index.json` entry's `modifiedAt` string (e.g.
+ * "2026-08-24 18:24 UTC", see `SearchIndexEntry`) back into epoch
+ * milliseconds, for comparison against read-event timestamps
+ * (REQ-EXPLORE-007). Returns `undefined` if the string can't be parsed.
+ * @param {string} formatted
+ * @returns {number | undefined}
+ */
+export function parseModifiedAt(formatted) {
+  const iso = formatted.replace(" UTC", "Z").replace(" ", "T");
+  const ms = Date.parse(iso);
+  return Number.isNaN(ms) ? undefined : ms;
+}
+
 const EXPLORATION_CHANGED_EVENT = "enastro:exploration-changed";
 
 /**
@@ -96,8 +185,8 @@ function dispatchChanged(statusById, cursorTs) {
   window.dispatchEvent(new CustomEvent(EXPLORATION_CHANGED_EVENT, { detail: { statusById, cursorTs } }));
 }
 
-function formatEventTime(ts) {
-  return new Date(ts).toLocaleString();
+function formatEventTime(ts, offsetMinutes) {
+  return formatLocalTimestamp(ts, offsetMinutes);
 }
 
 function main() {
@@ -105,6 +194,7 @@ function main() {
   // `null` means "live" (cursor = now); any other value is an explicit
   // past timestamp the user rewound to (REQ-EXPLORE-003).
   let cursorTs = null;
+  const offsetMinutes = -new Date().getTimezoneOffset();
 
   const bar = document.getElementById("exploration-bar");
   if (!bar) {
@@ -118,8 +208,13 @@ function main() {
   const panel = document.getElementById("exploration-rewind-panel");
   const historyList = document.getElementById("exploration-history-list");
   const returnToNowButton = document.getElementById("exploration-return-to-now");
+  const resetHereButton = document.getElementById("exploration-reset-here");
+  const pruneHereButton = document.getElementById("exploration-prune-here");
   const warning = document.getElementById("exploration-storage-warning");
+  const missingNotice = document.getElementById("exploration-missing-notice");
+  const autoUnreadNotice = document.getElementById("exploration-auto-unread-notice");
   const markReadButton = document.querySelector("[data-mark-read]");
+  const readAtSpan = document.querySelector("[data-read-at]");
 
   function currentCursor() {
     return cursorTs ?? Infinity;
@@ -131,6 +226,18 @@ function main() {
     warning.hidden = false;
   }
 
+  /** Persists `nextLog` directly (bypassing `appendEvent`), for the
+   * destructive Reset/Prune operations which replace the whole log rather
+   * than appending a single event. */
+  function persistLog(nextLog) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextLog));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function renderHistoryList() {
     if (!historyList) return;
     historyList.replaceChildren();
@@ -138,7 +245,7 @@ function main() {
       const item = document.createElement("li");
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = `${event.status === "read" ? "Read" : "Unread"} · ${event.id} · ${formatEventTime(event.ts)}`;
+      button.textContent = `${event.status === "read" ? "Read" : "Unread"} · ${event.id} · ${formatEventTime(event.ts, offsetMinutes)}`;
       button.addEventListener("click", () => {
         cursorTs = event.ts;
         update();
@@ -164,6 +271,19 @@ function main() {
     // Disabled while viewing a past state (REQ-EXPLORE-003): rewinding is
     // read-only, so it can't be mixed with recording new status changes.
     markReadButton.disabled = cursorTs !== null;
+
+    // The read-at timestamp is the only other on-page indicator of
+    // read/unread state on note pages, so its presence/absence doubles as
+    // the at-a-glance read/unread cue (no separate button styling needed).
+    if (readAtSpan) {
+      const readAt = isRead ? getLastEventTimestamp(log, id, currentCursor()) : undefined;
+      if (readAt !== undefined) {
+        readAtSpan.textContent = `Read: ${formatLocalTimestamp(readAt, offsetMinutes)}`;
+        readAtSpan.hidden = false;
+      } else {
+        readAtSpan.hidden = true;
+      }
+    }
   }
 
   function update() {
@@ -172,6 +292,12 @@ function main() {
     applyToMarkReadButton(statusById);
     if (returnToNowButton) {
       returnToNowButton.hidden = cursorTs === null;
+    }
+    if (resetHereButton) {
+      resetHereButton.hidden = cursorTs === null;
+    }
+    if (pruneHereButton) {
+      pruneHereButton.hidden = cursorTs === null;
     }
     renderHistoryList();
     dispatchChanged(statusById, currentCursor());
@@ -184,11 +310,51 @@ function main() {
 
   returnToNowButton?.addEventListener("click", () => {
     cursorTs = null;
+    if (panel) panel.hidden = true;
+    update();
+  });
+
+  resetHereButton?.addEventListener("click", () => {
+    if (cursorTs === null) return;
+    if (
+      !confirm(
+        "This will permanently delete all exploration history recorded after this point " +
+          "(history up to and including this point is kept). Continue?",
+      )
+    ) {
+      return;
+    }
+    log = resetLogAt(log, cursorTs);
+    if (!persistLog(log)) {
+      showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
+    }
+    cursorTs = null;
+    if (panel) panel.hidden = true;
+    update();
+  });
+
+  pruneHereButton?.addEventListener("click", () => {
+    if (cursorTs === null) return;
+    if (!confirm("This permanently removes no-op read/unread history up to this point. Continue?")) return;
+    log = pruneLogUntil(log, cursorTs);
+    if (!persistLog(log)) {
+      showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
+    }
+    cursorTs = null;
+    if (panel) panel.hidden = true;
     update();
   });
 
   warning?.addEventListener("click", () => {
     warning.hidden = true;
+  });
+
+  missingNotice?.addEventListener("click", () => {
+    missingNotice.hidden = true;
+  });
+
+  autoUnreadNotice?.addEventListener("click", () => {
+    autoUnreadNotice.hidden = true;
   });
 
   markReadButton?.addEventListener("click", () => {
@@ -204,7 +370,76 @@ function main() {
     update();
   });
 
+  /**
+   * Fetches the already-public search-index.json (id + modifiedAt for
+   * every currently-published note) so that, on load, we can:
+   *  - notice log entries whose id no longer corresponds to any published
+   *    note (REQ-EXPLORE-006's topology-change resilience extended to a
+   *    user-visible notice), and
+   *  - auto-revert to "unread" any note marked "read" before its most
+   *    recent edit (REQ-EXPLORE-007), since the reader's understanding of
+   *    it may be stale.
+   * Runs independently of the rest of this module: if it fails (offline,
+   * missing file, bad JSON), the sync features are simply skipped and
+   * every other exploration-status feature keeps working normally.
+   */
+  async function syncWithSearchIndex() {
+    const href = bar.dataset.searchIndexHref;
+    if (!href) return;
+
+    let entries;
+    try {
+      const response = await fetch(href);
+      if (!response.ok) return;
+      entries = await response.json();
+    } catch {
+      return;
+    }
+    if (!Array.isArray(entries)) return;
+
+    const modifiedAtById = new Map();
+    for (const entry of entries) {
+      if (!entry || typeof entry.id !== "string") continue;
+      const epochMs = parseModifiedAt(entry.modifiedAt);
+      if (epochMs !== undefined) modifiedAtById.set(entry.id, epochMs);
+    }
+    if (modifiedAtById.size === 0) return;
+
+    // Each notice is independently shown/dismissed, and lists the actual
+    // note ids (rather than just a count) since the box is dismissed with
+    // a single click anyway — the id is more useful than a bare number.
+    const loggedIds = new Set(log.map((event) => event.id));
+    const missingIds = [...loggedIds].filter((id) => !modifiedAtById.has(id));
+    if (missingIds.length > 0 && missingNotice) {
+      missingNotice.textContent = `No longer exist, can no longer be tracked: ${missingIds.join(", ")}`;
+      missingNotice.hidden = false;
+    }
+
+    const autoUnreadIds = [];
+    const statusById = computeStatusAsOf(log, Infinity);
+    for (const [id, status] of statusById) {
+      if (status !== "read") continue;
+      const modifiedAtMs = modifiedAtById.get(id);
+      if (modifiedAtMs === undefined) continue;
+      const readTs = getLastEventTimestamp(log, id, Infinity);
+      if (readTs !== undefined && modifiedAtMs > readTs) {
+        const result = appendEvent(log, id, "unread");
+        log = result.log;
+        autoUnreadIds.push(id);
+      }
+    }
+    if (autoUnreadIds.length > 0 && autoUnreadNotice) {
+      autoUnreadNotice.textContent = `Updated since read, marked unread again: ${autoUnreadIds.join(", ")}`;
+      autoUnreadNotice.hidden = false;
+    }
+
+    if (autoUnreadIds.length > 0) {
+      update();
+    }
+  }
+
   update();
+  void syncWithSearchIndex();
 }
 
 // Guarded so this module can be imported for its pure log/status functions

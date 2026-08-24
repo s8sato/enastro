@@ -19,4 +19,16 @@ export function computeStatusAsOf(
   cursorTs?: number,
 ): Map<string, string>;
 
+export function getLastEventTimestamp(
+  log: ExplorationEvent[],
+  id: string,
+  cursorTs?: number,
+): number | undefined;
+
+export function resetLogAt(log: ExplorationEvent[], cursorTs: number): ExplorationEvent[];
+
+export function pruneLogUntil(log: ExplorationEvent[], cursorTs: number): ExplorationEvent[];
+
+export function parseModifiedAt(formatted: string): number | undefined;
+
 export function getStatusSnapshot(cursorTs?: number): Map<string, string>;

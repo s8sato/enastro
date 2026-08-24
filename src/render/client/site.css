@@ -573,6 +573,16 @@ span.broken-link {
   cursor: not-allowed;
 }
 
+/* Read-at timestamp (REQ-EXPLORE-007-adjacent UX): its presence/absence is
+ * itself the at-a-glance read/unread cue on note pages, so no separate
+ * button styling is needed. */
+.read-at {
+  margin-left: 0.5rem;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
 /* Exploration rewind bar (REQ-EXPLORE-003), shared across all three page
  * kinds — a small floating widget rather than another sticky header row,
  * so it doesn't compete with the existing nav/tag-filter chrome. */
@@ -624,6 +634,18 @@ span.broken-link {
   cursor: pointer;
 }
 
+/* ID-mismatch / stale-read notices (REQ-EXPLORE-006/007), dismissible the
+ * same way as the storage-quota warning above. */
+.exploration-notice {
+  margin: 0 0 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--nebula-dim);
+  border-radius: var(--radius);
+  color: var(--nebula);
+  cursor: pointer;
+}
+
 #exploration-return-to-now {
   display: block;
   width: 100%;
@@ -633,6 +655,22 @@ span.broken-link {
   border: 1px solid var(--nebula-dim);
   border-radius: var(--radius);
   color: var(--nebula);
+  cursor: pointer;
+}
+
+/* Reset to here / Prune until here (ADR-0014): destructive, so styled with
+ * the same warning tone as the storage-quota warning rather than the
+ * neutral "Return to now" nebula tone. */
+#exploration-reset-here,
+#exploration-prune-here {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.5rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: var(--radius);
+  color: var(--accent);
   cursor: pointer;
 }
 

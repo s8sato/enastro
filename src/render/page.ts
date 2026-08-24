@@ -21,13 +21,23 @@ export interface RenderNotePageParams {
  * across all three page kinds. Hidden by default and populated/revealed by
  * exploration.mjs (progressive enhancement, same pattern as local-time.mjs);
  * without JavaScript it simply stays invisible and inert.
+ *
+ * `rootPrefix` is the relative path back to the site root (e.g. `"../"` for
+ * note pages, `""` for index/graph pages) — needed so exploration.mjs can
+ * fetch the already-public `search-index.json` (for ID-mismatch detection
+ * and stale-read detection, REQ-EXPLORE-006/007) regardless of which page
+ * kind it's running on.
  */
-function renderExplorationBar(assetsPrefix: string): string {
-  return `<div id="exploration-bar" class="exploration-bar" hidden>
+function renderExplorationBar(assetsPrefix: string, rootPrefix: string): string {
+  return `<div id="exploration-bar" class="exploration-bar" data-search-index-href="${rootPrefix}search-index.json" hidden>
 <button type="button" id="exploration-rewind-toggle">History</button>
 <div id="exploration-rewind-panel" hidden>
 <p id="exploration-storage-warning" class="exploration-warning" hidden></p>
+<p id="exploration-missing-notice" class="exploration-notice" hidden></p>
+<p id="exploration-auto-unread-notice" class="exploration-notice" hidden></p>
 <button type="button" id="exploration-return-to-now" hidden>Return to now</button>
+<button type="button" id="exploration-reset-here" hidden>Reset to here</button>
+<button type="button" id="exploration-prune-here" hidden>Prune until here</button>
 <ul id="exploration-history-list"></ul>
 </div>
 </div>
@@ -63,8 +73,8 @@ export function renderNotePage(params: RenderNotePageParams): string {
 </head>
 <body>
 <nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a></nav>
-${renderExplorationBar("../assets/")}
-<p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span> <button type="button" class="mark-read-button" data-mark-read="${escapeHtml(node.id)}" hidden>Mark as read</button></p>
+${renderExplorationBar("../assets/", "../")}
+<p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span> <button type="button" class="mark-read-button" data-mark-read="${escapeHtml(node.id)}" hidden>Mark as read</button><span class="read-at" data-read-at hidden></span></p>
 <p class="modified" data-modified="${modifiedAtEpochMs}">Last modified: ${escapeHtml(modifiedAt)}</p>
 ${tagsHtml}
 <article>${bodyHtml}</article>
@@ -101,7 +111,7 @@ export function renderIndexPage(nodes: PublicNode[]): string {
 </head>
 <body>
 <nav><a href="graph.html">Graph view</a></nav>
-${renderExplorationBar("assets/")}
+${renderExplorationBar("assets/", "")}
 <header class="index-header">
 <h1>Notes</h1>
 <input type="search" id="search-box" placeholder="Search notes...">
@@ -137,7 +147,7 @@ export function renderGraphPage(): string {
 <nav><a href="index.html">All notes</a></nav>
 <div id="tag-filters"></div>
 </div>
-${renderExplorationBar("assets/")}
+${renderExplorationBar("assets/", "")}
 <div id="graph-canvas-container"></div>
 <p id="graph-status" class="graph-status" role="status"></p>
 <script type="module" src="assets/graph-view.mjs"></script>
