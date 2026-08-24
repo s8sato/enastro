@@ -160,3 +160,37 @@ fetch に失敗した場合（オフライン、ファイル不在等）は、�
 - id + modifiedAt 専用の新規 manifest artifact を追加する: 実現可能だが、既存の
   `search-index.json` が既にほぼ同一の情報（id, modifiedAt）を公開物として持っているため、
   重複した artifact を増やさずに済む前者を優先した。
+
+## Amendment (2026-08-24): 初期状態エントリの選択可能化、History のタイムゾーン表示廃止（DECIDED）
+
+ユーザーからの追加要望に基づき、本 ADR を以下のとおり改訂する。
+
+### 初期状態を History リストの選択可能な末尾エントリとして表示
+
+これまで History リストは実際に記録されたイベントのみを列挙しており、「一切イベントが
+記録されていない初期状態」（＝全ノート未読）へ戻る手段がなかった。これを解消するため、
+History リストの末尾（最古の位置、常にリストの最後）に "Initial state" という synthetic な
+エントリを追加する。クリックすると、カーソルを sentinel 値
+`INITIAL_CURSOR_TS = Number.NEGATIVE_INFINITY` に設定する。
+
+`computeStatusAsOf` / `getLastEventTimestamp` / `resetLogAt` / `pruneLogUntil`
+はいずれも `cursorTs` 以下の `ts` を持つイベントのみを対象とする設計のため、実イベントの
+`ts`（常に `Date.now()` 由来の正の数）は `-Infinity` を超えない = このカーソルでは
+1件も fold されず、自然に「全て未読」という初期状態を再現できる。既存の pure 関数は
+無変更のまま、この sentinel をそのまま渡すだけで意図通り動作する。
+
+このエントリは、ログが空であっても常に表示される（初期状態は「イベントの有無」に関わらず
+恒常的に選択可能な rewind 先であるため）。
+
+検討した代替案:
+
+- ログが空の状態を「初期状態」の唯一の表現とし、専用エントリを設けない: ログにイベントが
+  1件でも記録された後は、初期状態を rewind 先として選ぶ手段が失われるため不採用。
+
+### History リストのタイムゾーン表示廃止
+
+History エントリのタイムスタンプ表示を、`formatLocalTimestamp`（`(UTC±HH:MM)` 付き）から
+`formatLocalDateOnly`（日時のみ、タイムゾーン表記なし）に変更する。ローカルタイムゾーンでの
+表示という前提はそのままに、History リスト内で同一の（閲覧者の）タイムゾーンを反復表示する
+ことが冗長と判断したため。ノートページの読了日時表示は元々 `formatLocalDateOnly` を使用して
+おり、本改訂によって表示形式が統一される。

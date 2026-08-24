@@ -32,9 +32,21 @@
  * DOM-wiring code below is responsible for persisting their result and
  * requires an explicit confirmation before doing so.
  */
-import { formatLocalDateOnly, formatLocalTimestamp } from "./format-local-time.mjs";
+import { formatLocalDateOnly } from "./format-local-time.mjs";
 
 export const STORAGE_KEY = "enastro:exploration:v1";
+
+/**
+ * Sentinel cursor value representing the "initial state" — before any
+ * event has ever been recorded (all notes implicitly unread). Folding the
+ * log up to this cursor (`computeStatusAsOf(log, INITIAL_CURSOR_TS)`)
+ * naturally yields an empty status map, since every real event's `ts` is a
+ * `Date.now()` value and therefore always greater than `-Infinity`. This
+ * lets the initial state be selected from the History list exactly like
+ * any other rewind target, without any special-casing in the pure
+ * log/status functions above.
+ */
+export const INITIAL_CURSOR_TS = Number.NEGATIVE_INFINITY;
 
 /** Reads the raw event log from localStorage. Returns [] if absent/corrupt. */
 export function loadLog() {
@@ -186,7 +198,7 @@ function dispatchChanged(statusById, cursorTs) {
 }
 
 function formatEventTime(ts, offsetMinutes) {
-  return formatLocalTimestamp(ts, offsetMinutes);
+  return formatLocalDateOnly(ts, offsetMinutes);
 }
 
 function main() {
@@ -264,6 +276,26 @@ function main() {
       item.appendChild(button);
       historyList.appendChild(item);
     }
+
+    // Synthetic entry for the "initial state" (before any event was ever
+    // recorded, i.e. every note unread) — always shown at the very end of
+    // the list (the oldest point in history), so it stays selectable even
+    // once real events exist, and even when the log is empty.
+    const initialItem = document.createElement("li");
+    const initialButton = document.createElement("button");
+    initialButton.type = "button";
+    initialButton.textContent = "Initial state (nothing explored yet)";
+    const isInitialActive = cursorTs === INITIAL_CURSOR_TS;
+    initialButton.classList.toggle("active", isInitialActive);
+    if (isInitialActive) {
+      initialButton.setAttribute("aria-current", "true");
+    }
+    initialButton.addEventListener("click", () => {
+      cursorTs = INITIAL_CURSOR_TS;
+      update();
+    });
+    initialItem.appendChild(initialButton);
+    historyList.appendChild(initialItem);
   }
 
   function applyToNoteList(statusById) {

@@ -169,7 +169,9 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     await page.click("#exploration-rewind-toggle");
     const historyEntries = page.locator("#exploration-history-list button");
-    await expect.poll(() => historyEntries.count()).toBe(3);
+    // 3 real events + the synthetic "Initial state" entry always appended
+    // at the end of the list.
+    await expect.poll(() => historyEntries.count()).toBe(4);
 
     // Live/"now": no entry should be highlighted.
     for (const entry of await historyEntries.all()) {
@@ -186,6 +188,43 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     for (const entry of await historyEntries.all()) {
       expect((await entry.getAttribute("class")) ?? "").not.toContain("active");
     }
+  });
+
+  it("always shows a selectable 'Initial state' entry at the end of the history list, resetting all notes to unread (REQ-EXPLORE-003)", async () => {
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.evaluate(
+      ({ key }) => {
+        localStorage.setItem(key, JSON.stringify([{ id: "note-a", status: "read", ts: Date.now() }]));
+      },
+      { key: STORAGE_KEY },
+    );
+    await page.reload();
+
+    const markReadButton = page.locator("[data-mark-read]");
+    await expect.poll(() => markReadButton.isVisible()).toBe(true);
+
+    await page.click("#exploration-rewind-toggle");
+    const historyEntries = page.locator("#exploration-history-list button");
+    await expect.poll(() => historyEntries.count()).toBe(2);
+
+    const initialEntry = historyEntries.last();
+    expect(await initialEntry.textContent()).toMatch(/Initial state/);
+    // No timezone marker in any history entry's timestamp:
+    for (const entry of await historyEntries.all()) {
+      expect(await entry.textContent()).not.toMatch(/UTC/);
+    }
+
+    await initialEntry.click();
+    await expect.poll(() => initialEntry.getAttribute("class")).toContain("active");
+    expect(await initialEntry.getAttribute("aria-current")).toBe("true");
+    // Rewound to the initial state: the note reads as unread again, and
+    // status-changing is disabled (read-only, like any other rewind).
+    expect(await markReadButton.textContent()).toBe("Mark as read");
+    expect(await markReadButton.isDisabled()).toBe(true);
+
+    await page.click("#exploration-return-to-now");
+    expect(await markReadButton.textContent()).toBe("Mark as unread");
+    expect(await markReadButton.isDisabled()).toBe(false);
   });
 
   it("shows a read-at timestamp only while the note is read, doubling as the read/unread cue", async () => {
@@ -256,8 +295,9 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     expect(await missingNotice.isHidden()).toBe(true);
 
     const historyEntries = page.locator("#exploration-history-list button");
-    // The original seeded "read" event plus the auto-appended "unread" one:
-    await expect.poll(() => historyEntries.count()).toBe(2);
+    // The original seeded "read" event plus the auto-appended "unread" one,
+    // plus the synthetic "Initial state" entry:
+    await expect.poll(() => historyEntries.count()).toBe(3);
   });
 
   it("supports Reset to here, permanently discarding history after the cursor (REQ-EXPLORE-008)", async () => {
@@ -283,7 +323,8 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     await page.click("#exploration-rewind-toggle");
     const historyEntries = page.locator("#exploration-history-list button");
-    await expect.poll(() => historyEntries.count()).toBe(3);
+    // 3 real events + the synthetic "Initial state" entry:
+    await expect.poll(() => historyEntries.count()).toBe(4);
     // Entries are listed newest-first; rewind to the middle (ts: base+200).
     await historyEntries.nth(1).click();
 
@@ -292,8 +333,9 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     // Events at/before the cursor (base+100, base+200) are kept untouched;
     // the event after the cursor (base+300, "read") is permanently gone —
-    // this actually reverts to the rewound ("unread") state.
-    await expect.poll(() => historyEntries.count()).toBe(2);
+    // this actually reverts to the rewound ("unread") state. (+1 for the
+    // synthetic "Initial state" entry, always present.)
+    await expect.poll(() => historyEntries.count()).toBe(3);
     const stored = JSON.parse((await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)) ?? "[]");
     expect(stored).toHaveLength(2);
     expect(stored.every((event: { status: string }) => event.status !== undefined)).toBe(true);
@@ -323,7 +365,8 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     await page.click("#exploration-rewind-toggle");
     const historyEntries = page.locator("#exploration-history-list button");
-    await expect.poll(() => historyEntries.count()).toBe(3);
+    // 3 real events + the synthetic "Initial state" entry:
+    await expect.poll(() => historyEntries.count()).toBe(4);
     // Rewind to the most recent entry so "Prune until here" covers everything.
     await historyEntries.first().click();
 
@@ -331,8 +374,9 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     await page.click("#exploration-prune-here");
 
     // note-a's read→unread round trip nets to no change and is fully
-    // annihilated; note-b's single "read" event survives.
-    await expect.poll(() => historyEntries.count()).toBe(1);
+    // annihilated; note-b's single "read" event survives. (+1 for the
+    // synthetic "Initial state" entry, always present.)
+    await expect.poll(() => historyEntries.count()).toBe(2);
     expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toMatch(/"id":"note-b"/);
   });
 });

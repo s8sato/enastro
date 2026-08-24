@@ -155,7 +155,7 @@ minimal Markdown vault
 |---|---|---|
 | REQ-EXPLORE-001 | 閲覧者はノートごとに「未読」「既読」の2値ステータスを持つ **MUST**。既読化はノートページ上の手動ボタン（Mark as read）操作でのみ発火し、スクロール検知等による自動既読は行わない **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md)）。 | DECIDED |
 | REQ-EXPLORE-002 | ステータスはブラウザの `localStorage` にのみ保存され、`localStorage.setItem` が失敗(ストレージ上限超過等)した場合は、その場で閲覧者に警告を表示する **MUST**。警告発生時も、その場のページ表示上は変更を即時反映してよいが、リロード後に保存されない場合がある旨を示す **SHOULD**。 | DECIDED |
-| REQ-EXPLORE-003 | 保存されたステータス変更は追記型のイベントログとして記録され、閲覧者は任意の過去時点まで表示を巻き戻す（rewind）ことができる **MUST**。rewind はログを削除せず、閲覧用のカーソル移動として扱う **MUST**。rewind 中は新たなステータス変更操作を無効化する **MUST**。 | DECIDED |
+| REQ-EXPLORE-003 | 保存されたステータス変更は追記型のイベントログとして記録され、閲覧者は任意の過去時点まで表示を巻き戻す（rewind）ことができる **MUST**。一切イベントが記録されていない「初期状態」（全ノート未読）も、History リスト上の常に選択可能なエントリとして保持される **MUST**。rewind はログを削除せず、閲覧用のカーソル移動として扱う **MUST**。rewind 中は新たなステータス変更操作を無効化する **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂）。 | DECIDED |
 | REQ-EXPLORE-004 | 探索ステータスはノート ID をキーに管理され、グラフのトポロジー変化（ノード/エッジの増減）の影響を受けない **MUST**。存在しなくなった ID のステータスは単に参照されず、新規 ID は未読として扱われる **MUST**。 | DECIDED |
 | REQ-EXPLORE-005 | 既読ノートについて、一覧ページのビュレット、グラフ UI 上の当該ノード、当該ノードを起点とするエネルギー粒子が減光・無彩色化して表示される **MUST**。 | DECIDED |
 | REQ-EXPLORE-006 | 探索ステータスはいかなるビルド成果物（`graph.json`, `search-index.json`, 生成 HTML）にも一切書き込まれない **MUST**（[08-security-and-privacy.md](08-security-and-privacy.md) の privacy invariant と整合）。 | DECIDED |
