@@ -99,7 +99,9 @@ export function renderIndexPage(nodes: PublicNode[]): string {
  * Assembles the Graph UI secondary page (REQ-GRAPH-004/005, REQ-UX-009,
  * ADR-0010, ADR-0011). No node/edge data is templated in server-side; the
  * client fetches the already-public `graph.json` at runtime and renders it
- * with `graph-view.mjs` (WebGL, via a vendored pixi.js build).
+ * with `graph-view.mjs` (WebGL, via a vendored pixi.js build). The tag
+ * filter UI (REQ-UX-002) is populated client-side by `graph-view.mjs` once
+ * `graph.json` has loaded, mirroring the All Notes page's tag filters.
  */
 export function renderGraphPage(): string {
   return `<!DOCTYPE html>
@@ -111,7 +113,10 @@ export function renderGraphPage(): string {
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body class="graph-shell">
+<div class="graph-header">
 <nav><a href="index.html">All notes</a></nav>
+<div id="tag-filters"></div>
+</div>
 <div id="graph-canvas-container"></div>
 <p id="graph-status" class="graph-status" role="status"></p>
 <script type="module" src="assets/graph-view.mjs"></script>

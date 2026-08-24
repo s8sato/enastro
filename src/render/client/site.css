@@ -543,15 +543,35 @@ span.broken-link {
   max-width: none;
 }
 
-.graph-shell nav {
+.graph-shell .graph-header {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.graph-shell .graph-header nav {
   background: rgba(6, 7, 26, 0.75);
   backdrop-filter: blur(6px);
   border-bottom-color: var(--border-soft);
+}
+
+/* Reuse the same #tag-filters pill styling as the All Notes page, but as a
+   continuation of the header bar (translucent + blurred, no top border so
+   it visually joins the nav above it) rather than inset page content. */
+.graph-shell .graph-header #tag-filters {
+  margin: 0;
+  padding: 0.65rem 1.25rem;
+  background: rgba(6, 7, 26, 0.75);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.graph-shell .graph-header #tag-filters:empty {
+  display: none;
 }
 
 #graph-canvas-container {

@@ -18,6 +18,7 @@
  * the user's explicit instruction (ADR-0010).
  */
 import * as PIXI from "./pixi.min.mjs";
+import { filterEntries } from "./filter.mjs";
 
 // Color palette mirrors site.css's design tokens (`--accent`, `--nebula`,
 // `--border`, `--fg`) so the Graph UI feels visually continuous with the
@@ -45,6 +46,7 @@ function clamp(value, min, max) {
 async function main() {
   const container = document.getElementById("graph-canvas-container");
   const status = document.getElementById("graph-status");
+  const tagFilters = document.getElementById("tag-filters");
   if (!container) {
     return;
   }
@@ -95,7 +97,8 @@ async function main() {
   const maxDegree = Math.max(1, ...degreeById.values());
 
   // Edges are drawn first, as a single batched Graphics object, so they sit
-  // beneath nodes/particles.
+  // beneath nodes/particles. Redrawn whenever the tag filter (REQ-UX-002)
+  // changes, since a filtered-out node's edges must disappear along with it.
   const edgesLayer = new PIXI.Graphics();
   world.addChild(edgesLayer);
   const validEdges = [];
@@ -104,9 +107,20 @@ async function main() {
     const target = nodeById.get(edge.target);
     if (!source || !target) continue;
     validEdges.push({ source, target });
-    edgesLayer.moveTo(source.x, source.y).lineTo(target.x, target.y);
   }
-  edgesLayer.stroke({ width: 1, color: EDGE_COLOR, alpha: 0.5 });
+
+  /** @type {Set<string>} ids of nodes currently matching the tag filter (all nodes when no tags are selected). */
+  let activeNodeIds = new Set(graph.nodes.map((node) => node.id));
+
+  function redrawEdges() {
+    edgesLayer.clear();
+    for (const { source, target } of validEdges) {
+      if (!activeNodeIds.has(source.id) || !activeNodeIds.has(target.id)) continue;
+      edgesLayer.moveTo(source.x, source.y).lineTo(target.x, target.y);
+    }
+    edgesLayer.stroke({ width: 1, color: EDGE_COLOR, alpha: 0.5 });
+  }
+  redrawEdges();
 
   // Redrawn on hover only, to highlight the edges connected to the hovered
   // node (REQ-UX-009's "adjacent nodes/edges should stand out" feedback).
@@ -137,6 +151,7 @@ async function main() {
     const dt = ticker.deltaMS / 1000;
     particleCycleT = (particleCycleT + dt * PARTICLE_SPEED) % 1;
     for (const particle of particles) {
+      if (!particle.dot.visible) continue;
       particle.dot.x = particle.source.x + (particle.target.x - particle.source.x) * particleCycleT;
       particle.dot.y = particle.source.y + (particle.target.y - particle.source.y) * particleCycleT;
     }
@@ -349,6 +364,53 @@ async function main() {
   }
 
   fitToView();
+
+  // Tag filter UI (REQ-UX-002), mirroring the All Notes page's tag pills:
+  // selecting one or more tags hides every node that doesn't have *all* of
+  // them (AND semantics, via the shared filterEntries() logic), along with
+  // that node's edges and edge particles.
+  if (tagFilters) {
+    const allTags = [...new Set(graph.nodes.flatMap((node) => node.tags))].sort();
+
+    for (const tag of allTags) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.tag = tag;
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = `#${tag}`;
+      button.addEventListener("click", () => {
+        button.setAttribute("aria-pressed", button.getAttribute("aria-pressed") === "true" ? "false" : "true");
+        applyFilter();
+      });
+      tagFilters.appendChild(button);
+    }
+  }
+
+  function selectedTags() {
+    if (!tagFilters) return [];
+    return [...tagFilters.querySelectorAll('[aria-pressed="true"]')].map((button) => button.dataset.tag);
+  }
+
+  function applyFilter() {
+    const entries = graph.nodes.map((node) => ({ id: node.id, title: node.title, tags: node.tags, text: "", modifiedAt: "" }));
+    activeNodeIds = new Set(filterEntries(entries, "", selectedTags()));
+
+    for (const node of graph.nodes) {
+      const star = starById.get(node.id);
+      const isActive = activeNodeIds.has(node.id);
+      star.visible = isActive;
+      if (!isActive) {
+        if (armedTouchNodeId === node.id) armedTouchNodeId = null;
+        clearHighlight(node);
+      }
+    }
+
+    redrawEdges();
+
+    for (const particle of particles) {
+      particle.dot.visible = activeNodeIds.has(particle.source.id) && activeNodeIds.has(particle.target.id);
+    }
+  }
 
   // Exposes each node's current on-screen position, purely for E2E test
   // instrumentation (see src/e2e/graph-ui.e2e.test.ts) — pan/zoom moves
