@@ -27,6 +27,7 @@ describe("buildSite: client-side search & tag filter UI (REQ-UX-001, REQ-UX-002)
       "copy-id.mjs",
       "format-local-time.mjs",
       "local-time.mjs",
+      "theme-switcher.mjs",
     ]) {
       const copied = readFileSync(path.join(outDir, "assets", filename));
       const source = readFileSync(path.join(clientAssetsDir, filename));
@@ -46,6 +47,11 @@ describe("buildSite: client-side search & tag filter UI (REQ-UX-001, REQ-UX-002)
     expect(indexHtml).toContain('<script type="module" src="assets/search.mjs"></script>');
     expect(indexHtml).toContain('data-id="note-a"');
     expect(indexHtml).toContain('data-id="note-b"');
+    // Theme switcher trigger + client script (REQ-UX-011), consistent with
+    // the note/graph pages.
+    expect(indexHtml).toContain('id="theme-trigger"');
+    expect(indexHtml).toContain('<script type="module" src="assets/theme-switcher.mjs"></script>');
+    expect(indexHtml).toContain('localStorage.getItem("enastro:theme:v1")');
   });
 });
 

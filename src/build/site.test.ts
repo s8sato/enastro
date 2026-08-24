@@ -63,6 +63,12 @@ describe("buildSite (fixtures/basic-vault)", () => {
       /<span class="date-label">Updated<\/span> <span class="date-value" data-modified="\d+">\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC<\/span>/,
     );
     expect(noteA).toContain('<script type="module" src="../assets/local-time.mjs"></script>');
+    // Theme switcher trigger + client script present on every note page
+    // (REQ-UX-011), and the FOUC-prevention inline script runs before
+    // site.css would otherwise paint the default theme.
+    expect(noteA).toContain('id="theme-trigger"');
+    expect(noteA).toContain('<script type="module" src="../assets/theme-switcher.mjs"></script>');
+    expect(noteA).toContain('localStorage.getItem("enastro:theme:v1")');
     // Tags are links to the index page pre-filtered by that tag (REQ-UX-008).
     expect(noteA).toContain('<a href="../index.html?tags=example">#example</a>');
     expect(noteA).toContain('<a href="../index.html?tags=inline-tag">#inline-tag</a>');

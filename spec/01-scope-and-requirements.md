@@ -117,6 +117,7 @@ minimal Markdown vault
 | REQ-UX-008 | ノートページの `#tag` はリンクとして表示され、クリックすると一覧ページ（`index.html`）の対応するタグでフィルタされた表示に遷移する **SHOULD**。 | DECIDED |
 | REQ-UX-009 | Graph UI ページ（`graph.html`）をノート一覧・ノートページから相互にリンクできる副画面として提供する **MUST**（[ADR-0011](../decisions/ADR-0011-graph-ui-placement.md)）。 | DECIDED |
 | REQ-UX-010 | 出力は PC・モバイル両方でレスポンシブなレイアウトを提供し、Graph UI は touch による pan/zoom 操作をサポートする **MUST**。WCAG 準拠等の包括的 accessibility 対応は対象外（引き続き DEFERRED）。 | DECIDED |
+| REQ-UX-011 | 出力は12種のカラーテーマをクライアント完結で切り替え可能とする **SHOULD**。テーマ選択は `localStorage` にのみ保存され、index/note/graph の3ページ間で一貫する。ビルドは特定テーマに依存しない(REQ-BUILD-001 と整合し、REQ-UX-004 のポータビリティを維持する)。既存の探索ステータス機能([ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md))と同様、client-only の `localStorage` 完結パターンを踏襲し、ビルド成果物には一切書き込まない。 | DECIDED |
 
 ### 4.5 SEC
 
@@ -212,6 +213,7 @@ minimal Markdown vault
 | 02: 公開 artifact への非漏洩 | REQ-EXPLORE-006, REQ-SEC-001 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 02: ID不一致通知・自動unread同期 | REQ-EXPLORE-007 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 02: Reset to here / Prune until here | REQ-EXPLORE-008 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
+| 03: 12色テーマ切り替え | REQ-UX-011 | (render/client 実装、ADR-0014 の localStorage 完結パターンを踏襲) | 09 §2.6 | fixtures/basic-vault |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
 本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。

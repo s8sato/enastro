@@ -14,26 +14,121 @@
 :root {
   color-scheme: dark;
 
-  /* --- Color: deep-space navy base, warm starlight gold as the one loud
-     accent, a dimmer nebula violet reserved for secondary/graph moments. --- */
-  --bg: #06071a;
-  --bg-elevated: #0d0f26;
-  --bg-card: #10122c;
-  --fg: #eae8f2;
-  --fg-muted: #8b8fb0;
-  --accent: #f2c879;        /* starlight gold — links, headings, focus */
-  --accent-dim: #c9a45f;    /* hover/active state for accent */
-  --nebula: #9d8cf2;        /* secondary — tags, graph UI, backlinks */
-  --nebula-dim: #7b6bd6;
-  --border: #1d2044;
-  --border-soft: #171a38;
-
   --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --radius: 0.5rem;
   --transition: 160ms ease;
+}
+
+/* --- Theme tokens (REQ-UX-011) ---
+ * Each of the 12 themes below defines exactly 3 primitives: `--bg`
+ * (background), `--accent` (the one loud color — links, headings, focus)
+ * and `--nebula` (secondary — tags, graph UI, backlinks). Every other
+ * color token is derived from those 3 via `color-mix()` in the
+ * theme-independent block further down, so adding/adjusting a theme can
+ * never desync a hand-maintained pair of tokens.
+ *
+ * "moon" is the default (applies both when `data-theme` is absent and
+ * when explicitly set to "moon") — it matches enastro's original,
+ * hand-tuned palette as closely as color-mix derivation allows. Theme
+ * switching itself is entirely client-side (theme-switcher.mjs); the
+ * build never bakes in a specific theme (REQ-BUILD-001).
+ */
+:root,
+:root[data-theme="moon"] {
+  --bg: #06071a;
+  --accent: #f2c879;
+  --nebula: #9d8cf2;
+}
+
+:root[data-theme="aurora"] {
+  --bg: #03120c;
+  --accent: #7dffb3;
+  --nebula: #9d8cf2;
+}
+
+:root[data-theme="corona"] {
+  --bg: #0a0c10;
+  --accent: #eaf5f0;
+  --nebula: #8de6b0;
+}
+
+:root[data-theme="ether"] {
+  --bg: #10141c;
+  --accent: #dff5ff;
+  --nebula: #f5d9ff;
+}
+
+:root[data-theme="flare"] {
+  --bg: #140904;
+  --accent: #ff7a45;
+  --nebula: #ffce6b;
+}
+
+:root[data-theme="graviton"] {
+  --bg: #020208;
+  --accent: #6a5cff;
+  --nebula: #e8e6ff;
+}
+
+:root[data-theme="nebula"] {
+  --bg: #0c0616;
+  --accent: #ff8fc7;
+  --nebula: #4fd8e0;
+}
+
+:root[data-theme="nova"] {
+  --bg: #08060a;
+  --accent: #eaf2ff;
+  --nebula: #ff5f6d;
+}
+
+:root[data-theme="pulser"] {
+  --bg: #050a14;
+  --accent: #7ffcff;
+  --nebula: #7b8cff;
+}
+
+:root[data-theme="sirius"] {
+  --bg: #0b1226;
+  --accent: #b8d4ff;
+  --nebula: #5fd9c4;
+}
+
+:root[data-theme="venus"] {
+  --bg: #120d08;
+  --accent: #ffe9b8;
+  --nebula: #e0a86b;
+}
+
+:root[data-theme="void"] {
+  --bg: #020204;
+  --accent: #9aa0b8;
+  --nebula: #5c6280;
+}
+
+/* Tokens derived uniformly from the 3 primitives above, for every theme
+ * (defined once here — never hand-tuned per theme). `var()` resolves
+ * against each element's actual (possibly theme-overridden) --bg/--accent/
+ * --nebula at used-value time, regardless of which rule this block's
+ * selector specificity compares to, so this stays correct under any
+ * `data-theme` value. */
+:root {
+  --bg-elevated: color-mix(in srgb, var(--bg) 82%, white 18%);
+  --bg-card: color-mix(in srgb, var(--bg) 88%, white 12%);
+  --fg: color-mix(in srgb, white 92%, var(--bg));
+  --fg-muted: color-mix(in srgb, var(--nebula) 55%, var(--bg) 45%);
+  --accent-dim: color-mix(in srgb, var(--accent) 78%, var(--bg));
+  --nebula-dim: color-mix(in srgb, var(--nebula) 78%, var(--bg));
+  --border: color-mix(in srgb, var(--bg) 78%, white 22%);
+  --border-soft: color-mix(in srgb, var(--bg) 88%, white 12%);
+  /* Tag pill text color: `--nebula` alone reads too dim against the pill
+     background for some themes (e.g. Void, Pulser — WCAG AA contrast
+     failure), so pill text uses this lightened derivative instead of
+     `--nebula` directly. */
+  --nebula-text: color-mix(in srgb, white 32%, var(--nebula));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -312,16 +407,36 @@ article th {
   cursor: pointer;
   font-size: 0; /* hides the literal "Copy ID" label visually only —
                    it stays in the DOM as the button's accessible name */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b8fb0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='12' height='12' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 0.85rem;
   transition: border-color var(--transition);
+}
+
+/* The icon itself is drawn with a CSS mask rather than a hardcoded-color
+ * SVG data URI `background-image`, so its color follows the active theme
+ * (`--fg-muted` / `--accent-dim` on hover) instead of being frozen to the
+ * Moon theme's original hex values. */
+.copy-id::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: var(--fg-muted);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='12' height='12' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 0.85rem;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='12' height='12' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 0.85rem;
+  transition: background-color var(--transition);
 }
 
 .copy-id:hover {
   border-color: var(--accent-dim);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f2c879' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='12' height='12' rx='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E");
+}
+
+.copy-id:hover::before {
+  background-color: var(--accent-dim);
 }
 
 .copy-id-feedback {
@@ -402,7 +517,7 @@ ul.tags li a {
   border-radius: 999px;
   background: color-mix(in srgb, var(--nebula) 14%, var(--bg-elevated));
   border: 1px solid color-mix(in srgb, var(--nebula) 35%, var(--border));
-  color: var(--nebula);
+  color: var(--nebula-text);
   text-decoration: none;
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -487,7 +602,7 @@ span.broken-link {
   border-radius: 999px;
   background: color-mix(in srgb, var(--nebula) 14%, var(--bg-elevated));
   border: 1px solid color-mix(in srgb, var(--nebula) 35%, var(--border));
-  color: var(--nebula);
+  color: var(--nebula-text);
   text-decoration: none;
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -736,6 +851,108 @@ span.broken-link {
   color: var(--fg);
   border-color: var(--accent-dim);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* Theme switcher (REQ-UX-011), shared across all three page kinds — a
+ * small floating widget fixed to the bottom-left corner, symmetric with
+ * `.exploration-bar`'s bottom-right placement, so the two widgets never
+ * overlap and neither competes with the nav/tag-filter chrome. */
+.theme-switcher {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 20;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+#theme-trigger {
+  padding: 0.4rem 0.8rem;
+  background: rgba(13, 15, 38, 0.9);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+#theme-trigger:hover {
+  color: var(--fg);
+  border-color: var(--accent-dim);
+}
+
+#theme-dialog {
+  position: absolute;
+  left: 0;
+  bottom: 2.5rem;
+  padding: 0.75rem;
+  background: rgba(13, 15, 38, 0.96);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* The accessible source of truth (REQ-UX-011) — kept in the DOM,
+ * focusable, and readable by screen readers, but visually replaced by the
+ * rotary dial theme-switcher.mjs builds alongside it. Standard
+ * visually-hidden-but-focusable technique (not `display:none`/`hidden`,
+ * which would remove it from the accessibility tree and tab order). */
+.theme-select-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.theme-dial {
+  position: relative;
+  width: 12rem;
+  height: 12rem;
+}
+
+.theme-dial-point {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: none;
+  padding: 0.2rem;
+  cursor: pointer;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.theme-dial-point-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--dial-accent, var(--accent));
+}
+
+.theme-dial-point[aria-current="true"] {
+  color: var(--fg);
+}
+
+.theme-dial-point[data-preview="true"] {
+  color: var(--fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-dial-point {
+    transition: none;
+  }
 }
 
 /* Graph UI (graph.html, REQ-UX-009/010) shell — full-viewport canvas host

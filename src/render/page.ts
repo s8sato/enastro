@@ -44,6 +44,37 @@ function renderExplorationBar(assetsPrefix: string, rootPrefix: string): string 
 <script type="module" src="${assetsPrefix}exploration.mjs"></script>`;
 }
 
+/**
+ * FOUC-prevention script for the theme switcher (REQ-UX-011). Small,
+ * inline, and *not* externalized (unlike the module scripts below) so it
+ * runs synchronously before first paint: it reads the persisted theme
+ * choice from `localStorage` and applies `data-theme` to `<html>`
+ * immediately, before `site.css` would otherwise paint the default (Moon)
+ * theme. Without JavaScript (or before it runs), the page simply renders
+ * in the Moon theme — the same progressive-enhancement approach as
+ * `local-time.mjs`. Kept as a single literal shared by all three page
+ * kinds so their FOUC-prevention behavior can never drift apart.
+ */
+const THEME_FOUC_SCRIPT = `<script>(function(){try{var t=localStorage.getItem("enastro:theme:v1");if(t)document.documentElement.dataset.theme=t;}catch(e){}})();</script>`;
+
+/**
+ * Markup for the theme switcher trigger (REQ-UX-011), shared across all
+ * three page kinds. Deliberately kept independent of `<nav>` (rather than
+ * a nav link) and styled as a small floating widget fixed to the
+ * bottom-left corner — symmetric with the exploration bar's bottom-right
+ * placement (`.exploration-bar`) — so neither widget competes with the
+ * page's nav/tag-filter chrome or with each other. The actual dial/select
+ * UI is built by theme-switcher.mjs (progressive enhancement); without
+ * JavaScript only the inert trigger button exists.
+ */
+function renderThemeSwitcher(assetsPrefix: string): string {
+  return `<div id="theme-switcher" class="theme-switcher" hidden>
+<button type="button" id="theme-trigger" aria-haspopup="dialog" aria-controls="theme-dialog">Theme</button>
+<div id="theme-dialog" hidden></div>
+</div>
+<script type="module" src="${assetsPrefix}theme-switcher.mjs"></script>`;
+}
+
 /** Assembles a full HTML page for a single published note (REQ-UX-001~004, REQ-UX-006, REQ-UX-007, REQ-UX-008). */
 export function renderNotePage(params: RenderNotePageParams): string {
   const { node, bodyHtml, backlinks, modifiedAt, modifiedAtEpochMs } = params;
@@ -70,10 +101,12 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(node.title)}</title>
 <link rel="stylesheet" href="../assets/site.css">
+${THEME_FOUC_SCRIPT}
 </head>
 <body>
 <nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a></nav>
 ${renderExplorationBar("../assets/", "../")}
+${renderThemeSwitcher("../assets/")}
 <p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span> <button type="button" class="mark-read-button" data-mark-read="${escapeHtml(node.id)}" title="Mark as read" hidden>Mark as read</button></p>
 <p class="note-dates"><span class="date-group"><span class="date-label">Updated</span> <span class="date-value" data-modified="${modifiedAtEpochMs}">${escapeHtml(modifiedAt)}</span></span><span class="date-sep" data-read-sep hidden>·</span><span class="date-group" data-read-at hidden><span class="date-label">Read</span> <span class="date-value" data-read-value></span></span><span class="date-tz" data-tz></span></p>
 ${tagsHtml}
@@ -108,10 +141,12 @@ export function renderIndexPage(nodes: PublicNode[]): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>enastro</title>
 <link rel="stylesheet" href="assets/site.css">
+${THEME_FOUC_SCRIPT}
 </head>
 <body>
 <nav><a href="graph.html">Graph view</a></nav>
 ${renderExplorationBar("assets/", "")}
+${renderThemeSwitcher("assets/")}
 <header class="index-header">
 <h1>Notes</h1>
 <input type="search" id="search-box" placeholder="Search notes...">
@@ -141,6 +176,7 @@ export function renderGraphPage(): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>enastro · Graph view</title>
 <link rel="stylesheet" href="assets/site.css">
+${THEME_FOUC_SCRIPT}
 </head>
 <body class="graph-shell">
 <div class="graph-header">
@@ -148,6 +184,7 @@ export function renderGraphPage(): string {
 <div id="tag-filters"></div>
 </div>
 ${renderExplorationBar("assets/", "")}
+${renderThemeSwitcher("assets/")}
 <div id="graph-canvas-container"></div>
 <p id="graph-status" class="graph-status" role="status"></p>
 <script type="module" src="assets/graph-view.mjs"></script>

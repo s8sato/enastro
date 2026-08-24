@@ -3,6 +3,19 @@
 本プロジェクトのバージョンは [Semantic Versioning](https://semver.org/lang/ja/) に準拠する。
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) を参考にする。
 
+## [Unreleased]
+
+### 追加
+
+- **12色テーマ切り替え**: index/note/graph の全ページで有効な、フローティングの
+  テーマ切り替え UI（`.exploration-bar` と対称の左下配置）を追加。ダイヤル状の
+  ホバープレビュー UI と、キーボード操作のみでも選択可能なアクセシブルな
+  `<select>` を併設し、選択結果は `localStorage`（`enastro:theme:v1`）にのみ
+  保存されクライアント完結で3ページ間を通して一貫する。ビルド成果物は特定
+  テーマに依存せず（REQ-BUILD-001 と整合、REQ-UX-004 のポータビリティを維持）、
+  既存の探索ステータス機能（[ADR-0014](decisions/ADR-0014-node-exploration-status-persistence.md)）
+  と同様の client-only `localStorage` 完結パターンを踏襲する(REQ-UX-011)。
+
 ## [0.2.0] - 2026-08-23
 
 v0.1 の golden path の上に、Graph UI・性能測定・レスポンシブスタイリング・CI/Pages 自動公開を追加。
