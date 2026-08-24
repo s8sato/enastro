@@ -16,6 +16,14 @@ GitHub Pages のような無料の静的ホスティングにそのまま置く�
 （このデモは [fixtures/demo-vault](fixtures/demo-vault) というサンプル vault を、
 このリポジトリの CI が自動でビルド・公開しているものです。）
 
+### 性能: 10,000 nodes / 50,000 edges（v0.2.1 時点）
+
+https://github.com/user-attachments/assets/e0fb3ff7-5b91-43b7-88bb-a117f7adf170
+
+`fixtures/benchmark-vault`（10,000 notes / 50,000 edges 規模）を対象に、Graph UI の pan/zoom
+操作を実際に動かしている様子です。計測方法・数値目標との比較は
+[spec/07-performance.md](spec/07-performance.md) を参照してください。
+
 ## これは何がうれしいのか
 
 - 手元の Obsidian vault には、人に見せたいノートと、見せたくない下書き・日記・秘密のメモが
@@ -81,6 +89,10 @@ GitHub Pages のような無料の静的ホスティングにそのまま置く�
    > enastro が生成した `dist/` の中身だけで、vault リポジトリの可視性は別問題です。
 
 ## GitHub Pages への自動公開（エンドユーザー向けテンプレート）
+
+<details>
+<summary>自分の vault を GitHub Actions で自動的に GitHub Pages へ公開する手順（クリックで展開）</summary>
+<br>
 
 自分の vault を、毎回手作業でアップロードするのではなく、GitHub Actions で自動的に
 GitHub Pages へ公開したい場合の手順です。**vault リポジトリを private のまま保てるかどうかで
@@ -196,6 +208,8 @@ Personal Access Token の管理が必要になります。この private → pub
 
 いずれのパターンでも、このテンプレートは enastro が代わりに公開してくれるものではなく、
 **あなた自身のリポジトリ**で動く独立した workflow です。
+
+</details>
 
 ## v0.1 / v0.2 でできること
 
