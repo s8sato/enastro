@@ -82,7 +82,7 @@ minimal Markdown vault
 
 | ID | 要件 | Status |
 |---|---|---|
-| REQ-CONTENT-001 | パーサーは wikilink `[[note]]` および alias 付き `[[note|alias]]` を解釈 **MUST**。 | DECIDED |
+| REQ-CONTENT-001 | パーサーは wikilink `[[note]]` および alias 付き `[[note\|alias]]` を解釈 **MUST**。 | DECIDED |
 | REQ-CONTENT-002 | パーサーは embed `![[note]]` を解釈 **MUST**。 | DECIDED |
 | REQ-CONTENT-003 | パーサーは `#tag` 構文を解釈 **MUST**。 | DECIDED |
 | REQ-CONTENT-004 | パーサーは YAML frontmatter（少なくとも `publish` とタグ相当のフィールド）を解釈 **MUST**。 | DECIDED |
