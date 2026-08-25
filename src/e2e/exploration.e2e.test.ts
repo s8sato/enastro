@@ -98,22 +98,52 @@ describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
 
   it("supports rewinding to a past state via the shared history panel, and returning to now (REQ-EXPLORE-003)", async () => {
     await page.goto(`${baseUrl}/notes/note-a.html`);
+    // Seed two events so there's a genuine past state to rewind to,
+    // distinct from the log's most recent event (which is "now" itself —
+    // REQ-EXPLORE-009 — and must NOT behave like a rewind when selected).
+    await page.evaluate(
+      ({ key }) => {
+        const base = Date.now() - 60_000;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            snapshot: {},
+            log: [
+              { id: "note-a", status: "read", ts: base + 100 },
+              { id: "note-a", status: "unread", ts: base + 200 },
+            ],
+            snapshotUpdatedAt: base,
+          }),
+        );
+      },
+      { key: "enastro:exploration:v2" },
+    );
+    await page.reload();
     const markReadButton = page.locator("[data-mark-read]");
     await expect.poll(() => markReadButton.isVisible()).toBe(true);
 
     await page.click("#exploration-rewind-toggle");
     const historyEntries = page.locator("#exploration-history-list button");
-    await expect.poll(() => historyEntries.count()).toBeGreaterThan(0);
+    // 2 real events + the synthetic "Snapshot" entry:
+    await expect.poll(() => historyEntries.count()).toBe(3);
 
     const returnToNow = page.locator("#exploration-return-to-now");
     // At "now" (no persisted cursor yet), Return is disabled — there's
     // nothing to return from (REQ-EXPLORE-009).
     await expect.poll(() => returnToNow.isDisabled()).toBe(true);
 
-    // Note is currently "read" (from the previous test's persisted
-    // localStorage); rewinding to its own history entry re-derives that
-    // same state, but puts the UI into read-only "viewing the past" mode.
+    // Clicking the log's most recent entry (listed first, newest-first) is
+    // "now" by definition (REQ-EXPLORE-009) — it must behave identically to
+    // already being live: no read-only mode, Return stays disabled, no
+    // highlight.
     await historyEntries.first().click();
+    expect(await markReadButton.isDisabled()).toBe(false);
+    expect(await returnToNow.isDisabled()).toBe(true);
+    expect((await historyEntries.first().getAttribute("class")) ?? "").not.toContain("active");
+
+    // Rewinding to an actual past entry (not the most recent one) puts the
+    // UI into read-only "viewing the past" mode.
+    await historyEntries.nth(1).click();
     expect(await markReadButton.isDisabled()).toBe(true);
     expect(await returnToNow.isDisabled()).toBe(false);
 
@@ -163,13 +193,33 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
   it("keeps the rewind panel open after returning to now, showing the cursor is back at 'now'", async () => {
     await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.evaluate(
+      ({ key }) => {
+        const base = Date.now() - 60_000;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            snapshot: {},
+            log: [
+              { id: "note-a", status: "read", ts: base + 100 },
+              { id: "note-a", status: "unread", ts: base + 200 },
+            ],
+            snapshotUpdatedAt: base,
+          }),
+        );
+      },
+      { key: STORAGE_KEY },
+    );
+    await page.reload();
     const markReadButton = page.locator("[data-mark-read]");
     await expect.poll(() => markReadButton.isVisible()).toBe(true);
 
     await page.click("#exploration-rewind-toggle");
     const historyEntries = page.locator("#exploration-history-list button");
     await expect.poll(() => historyEntries.count()).toBeGreaterThan(0);
-    await historyEntries.first().click();
+    // Rewind to a genuinely past entry (not the most recent one, which is
+    // "now" itself — REQ-EXPLORE-009 — and wouldn't enable Return).
+    await historyEntries.nth(1).click();
 
     const panel = page.locator("#exploration-rewind-panel");
     await expect.poll(() => panel.isVisible()).toBe(true);
@@ -568,7 +618,10 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
           key,
           JSON.stringify({
             snapshot: {},
-            log: [{ id: "note-a", status: "read", ts: base + 100 }],
+            log: [
+              { id: "note-a", status: "read", ts: base + 100 },
+              { id: "note-a", status: "unread", ts: base + 200 },
+            ],
             snapshotUpdatedAt: base,
           }),
         );
@@ -580,8 +633,10 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     await page.click("#exploration-rewind-toggle");
     const historyEntries = page.locator("#exploration-history-list button");
     await expect.poll(() => historyEntries.count()).toBeGreaterThan(0);
-    await historyEntries.first().click();
-    await expect.poll(() => historyEntries.first().getAttribute("class")).toContain("active");
+    // Rewind to a genuinely past entry (not the most recent one, which is
+    // "now" itself — REQ-EXPLORE-009 — and wouldn't get highlighted).
+    await historyEntries.nth(1).click();
+    await expect.poll(() => historyEntries.nth(1).getAttribute("class")).toContain("active");
 
     // Navigate away to a different page and back — the cursor stays
     // rewound rather than resetting to "now" (REQ-EXPLORE-009, ADR-0014).
@@ -592,7 +647,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     await page.goto(`${baseUrl}/notes/note-a.html`);
     const historyEntriesAfterNav = page.locator("#exploration-history-list button");
     await expect.poll(() => historyEntriesAfterNav.count()).toBeGreaterThan(0);
-    await expect.poll(() => historyEntriesAfterNav.first().getAttribute("class")).toContain("active");
+    await expect.poll(() => historyEntriesAfterNav.nth(1).getAttribute("class")).toContain("active");
     const markReadButton = page.locator("[data-mark-read]");
     expect(await markReadButton.isDisabled()).toBe(true); // still read-only (rewound)
 
@@ -616,5 +671,65 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     await expect.poll(() => page.locator("#exploration-rewind-panel").isVisible()).toBe(false);
     await page.goto(`${baseUrl}/notes/note-a.html`);
     await expect.poll(() => page.locator("#exploration-rewind-panel").isVisible()).toBe(false);
+  });
+
+  it("treats clicking the log's most recent History entry as 'now', not as a rewind (REQ-EXPLORE-009)", async () => {
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.evaluate(
+      ({ key }) => {
+        const base = Date.now() - 60_000;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            snapshot: {},
+            log: [
+              { id: "note-a", status: "read", ts: base + 100 },
+              { id: "note-a", status: "unread", ts: base + 200 },
+            ],
+            snapshotUpdatedAt: base,
+          }),
+        );
+      },
+      { key: STORAGE_KEY },
+    );
+    await page.reload();
+
+    await page.click("#exploration-rewind-toggle");
+    const historyEntries = page.locator("#exploration-history-list button");
+    // 2 real events + the synthetic Snapshot entry:
+    await expect.poll(() => historyEntries.count()).toBe(3);
+
+    const markReadButton = page.locator("[data-mark-read]");
+    const returnToNow = page.locator("#exploration-return-to-now");
+    const resetHere = page.locator("#exploration-reset-here");
+
+    // Clicking the most recent entry (listed first, newest-first) is "now"
+    // by definition — no highlight, no read-only mode, Return/Reset stay
+    // disabled, just as if "Return to now" had been clicked instead.
+    await historyEntries.first().click();
+    expect((await historyEntries.first().getAttribute("class")) ?? "").not.toContain("active");
+    expect(await markReadButton.isDisabled()).toBe(false);
+    expect(await returnToNow.isDisabled()).toBe(true);
+    expect(await resetHere.isDisabled()).toBe(true);
+  });
+
+  it("aligns the graph page's History drawer position with the All Notes/note pages (nav only, not the tag-filters row)", async () => {
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.click("#exploration-rewind-toggle");
+    const notePanelTop = await page.locator("#exploration-rewind-panel").evaluate((el) => el.getBoundingClientRect().top);
+    await page.click("#exploration-rewind-toggle");
+
+    await page.goto(`${baseUrl}/graph.html`);
+    await expect
+      .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
+      .toBe("true");
+    // Give graph-view.mjs a chance to populate `#tag-filters` (fetched from
+    // graph.json asynchronously) — the whole point of this test is to
+    // confirm the drawer position ignores that row's height regardless.
+    await expect.poll(() => page.locator("#tag-filters").innerHTML()).not.toBe("");
+    await page.click("#exploration-rewind-toggle");
+    const graphPanelTop = await page.locator("#exploration-rewind-panel").evaluate((el) => el.getBoundingClientRect().top);
+
+    expect(graphPanelTop).toBe(notePanelTop);
   });
 });

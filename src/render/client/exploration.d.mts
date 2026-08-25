@@ -39,6 +39,8 @@ export function getLastEventTimestamp(
   cursorTs?: number,
 ): number | undefined;
 
+export function isNowTs(log: ExplorationEvent[], ts: number): boolean;
+
 export function resetLogAt(log: ExplorationEvent[], cursorTs: number): ExplorationEvent[];
 
 export function squashStateUntil(state: ExplorationState, cursorTs: number): ExplorationState;

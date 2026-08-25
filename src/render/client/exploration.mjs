@@ -257,6 +257,26 @@ export function squashStateUntil(state, cursorTs) {
 }
 
 /**
+ * Returns whether `ts` refers to "now" as defined by the event log: the
+ * timestamp of the log's most recent (last) event, since there is by
+ * definition no event after it. `state.log` is always kept in ascending
+ * `ts` order (append-only via `appendEvent()`, and `resetLogAt()`/
+ * `squashStateUntil()` only filter, never reorder), so the most recent
+ * event is simply the last array element. Used to normalize a candidate
+ * rewind cursor (e.g. from clicking a History row) so that selecting the
+ * newest logged event is treated identically to being live/"now" — rather
+ * than as a distinct "rewound to a point that happens to equal now" state
+ * (REQ-EXPLORE-009, ADR-0014). Returns `false` for an empty log (there is
+ * no "most recent event" to match against).
+ * @param {{ts: number}[]} log
+ * @param {number} ts
+ * @returns {boolean}
+ */
+export function isNowTs(log, ts) {
+  return log.length > 0 && log[log.length - 1].ts === ts;
+}
+
+/**
  * Reads the persisted rewind cursor position (ADR-0014, "カーソル位置の
  * ブラウザ永続化"). The cursor is always exactly one of three states —
  * "now" (live, `null`), the Snapshot (`SNAPSHOT_CURSOR_TS`), or a specific
@@ -417,24 +437,30 @@ function main() {
   }
 
   /**
-   * Keeps the drawer/scrim positioned *below* the header (REQ-UX /
-   * history-drawer mock) rather than covering it. The header's real
-   * height differs between page kinds (the graph page's `.graph-header`
-   * includes a variable-height tag-filter row that plain `<nav>` doesn't
-   * have), so this measures it at runtime instead of hardcoding a value —
-   * the same approach graph-view.mjs uses for `#particle-direction-toggle`.
-   * `Math.round()` avoids sub-pixel gaps/overlaps between the header's
+   * Keeps the drawer/scrim positioned *below* the `<nav>` bar (REQ-UX /
+   * history-drawer mock) rather than covering it. Measured at runtime
+   * (rather than hardcoding a value) since `<nav>` can wrap onto multiple
+   * lines on narrow viewports — the same approach graph-view.mjs uses for
+   * `#particle-direction-toggle`. Deliberately always `<nav>` itself, on
+   * every page kind: the graph page's `.graph-header` wrapper also
+   * includes a `#tag-filters` row, but that row scrolls away (not
+   * `position: sticky`) on the All Notes page, so using it as the
+   * position basis there would push the drawer below content that isn't
+   * actually pinned — using bare `<nav>` uniformly keeps the graph page's
+   * drawer position aligned with the All Notes/note pages instead of
+   * sitting lower to also clear the (graph-only-pinned) tag-filters row.
+   * `Math.round()` avoids sub-pixel gaps/overlaps between `<nav>`'s
    * measured bottom edge and the drawer/scrim's `top`.
    */
   function syncDrawerPosition() {
-    const header = document.querySelector(".graph-header") ?? document.querySelector("nav");
+    const header = document.querySelector("nav");
     if (!header) return;
     const top = `${Math.round(header.getBoundingClientRect().bottom)}px`;
     if (panel) panel.style.top = top;
     if (scrim) scrim.style.top = top;
   }
 
-  const headerEl = document.querySelector(".graph-header") ?? document.querySelector("nav");
+  const headerEl = document.querySelector("nav");
   if (headerEl && typeof ResizeObserver !== "undefined") {
     new ResizeObserver(syncDrawerPosition).observe(headerEl);
   }
@@ -554,7 +580,10 @@ function main() {
         button.setAttribute("aria-current", "true");
       }
       button.addEventListener("click", () => {
-        cursorTs = event.ts;
+        // "now" is defined as the log's most recent event (REQ-EXPLORE-009,
+        // ADR-0014): selecting that entry is treated identically to
+        // returning to live, not as a distinct rewound state.
+        cursorTs = isNowTs(state.log, event.ts) ? null : event.ts;
         saveCursor(cursorTs);
         update();
       });

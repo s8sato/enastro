@@ -7,6 +7,7 @@ import {
   appendEvent,
   computeStatusAsOf,
   getLastEventTimestamp,
+  isNowTs,
   loadCursor,
   loadDrawerOpen,
   loadState,
@@ -343,6 +344,41 @@ describe("parseModifiedAt (search-index.json sync, REQ-EXPLORE-006/007)", () => 
     // search-index.json entries omit `modifiedAt` entirely for notes with
     // no git history, rather than serializing a stray `null`/placeholder.
     expect(parseModifiedAt(undefined)).toBeUndefined();
+  });
+});
+
+describe("isNowTs (now == log's most recent event, REQ-EXPLORE-009, ADR-0014)", () => {
+  it("returns false for an empty log", () => {
+    expect(isNowTs([], 100)).toBe(false);
+  });
+
+  it("returns true when ts matches the log's last (most recent) event", () => {
+    const log = [
+      { id: "note-a", status: "read", ts: 100 },
+      { id: "note-a", status: "unread", ts: 200 },
+      { id: "note-b", status: "read", ts: 300 },
+    ];
+    expect(isNowTs(log, 300)).toBe(true);
+  });
+
+  it("returns false when ts matches an earlier (non-most-recent) event", () => {
+    const log = [
+      { id: "note-a", status: "read", ts: 100 },
+      { id: "note-a", status: "unread", ts: 200 },
+      { id: "note-b", status: "read", ts: 300 },
+    ];
+    expect(isNowTs(log, 200)).toBe(false);
+    expect(isNowTs(log, 100)).toBe(false);
+  });
+
+  it("returns false for a ts that doesn't appear in the log at all", () => {
+    const log = [{ id: "note-a", status: "read", ts: 100 }];
+    expect(isNowTs(log, 999)).toBe(false);
+  });
+
+  it("returns false for the Snapshot sentinel even with a non-empty log", () => {
+    const log = [{ id: "note-a", status: "read", ts: 100 }];
+    expect(isNowTs(log, SNAPSHOT_CURSOR_TS)).toBe(false);
   });
 });
 
