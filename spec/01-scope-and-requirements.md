@@ -221,6 +221,7 @@ minimal Markdown vault
 | 03: 12色テーマ切り替え | REQ-UX-011 | (render/client 実装、ADR-0014 の localStorage 完結パターンを踏襲、ADR-0016) | 09 §2.6 | fixtures/basic-vault |
 | 03: エネルギー粒子の進行方向トグル | REQ-UX-012 | ADR-0010（PROPOSED パラメータの具体化）、ADR-0016 | 09 §2.6 | fixtures/demo-vault, fixtures/benchmark-vault |
 | 03: サイトタイトルの vault ごとの指定 | REQ-UX-013 | ADR-0016 | 09 §2.6 | fixtures/basic-vault |
+| 03: 数式（KaTeX）レンダリング | REQ-CONTENT-010 | ADR-0017 | 09 §2.1 | fixtures/demo-vault |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
 本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。

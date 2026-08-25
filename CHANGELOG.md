@@ -3,7 +3,7 @@
 本プロジェクトのバージョンは [Semantic Versioning](https://semver.org/lang/ja/) に準拠する。
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) を参考にする。
 
-## [Unreleased]
+## [0.3.2] - 2026-08-26
 
 ### 追加
 
