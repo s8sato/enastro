@@ -26,6 +26,16 @@
   「dependency-first」から `wikilink` に変更。内部コード語彙も UI ラベルと整合させるため
   `dependency-first` から `backlink` に統一した(挙動は不変、名称のみの変更)。
 
+### 修正
+
+- **git 依存インストール時の `dist-ts` 欠落**: README のパターン A/B が案内する
+  `npx github:s8sato/enastro ...` で enastro を git 依存としてインストールした場合、
+  ビルド成果物(`dist-ts/`)が生成・同梱されず `ERR_MODULE_NOT_FOUND` で CLI が起動できない
+  不具合を修正。`package.json` に `prepare` script(git 依存インストール時に自動でビルドを
+  走らせる)と `files` allowlist(`.gitignore` に関わらず `bin`/`dist-ts` をパッケージへ確実に
+  含める)を追加した。再発防止として、CI に `npm pack` で生成した tarball を別プロジェクトへ
+  install して CLI を実行する `package-install-smoke` ジョブを追加。
+
 ## [0.3.1] - 2026-08-25
 
 v0.3.0 の探索ステータス(History)機能・テーマ切り替え機能を仕上げる修正・改善リリース。
