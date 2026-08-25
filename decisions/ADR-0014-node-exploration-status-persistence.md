@@ -466,4 +466,3 @@ export function getStatusSnapshot(cursorTs) {
 - `exploration.mjs` の `<script>` タグを `graph-view.mjs` より後に配置する: スクリプト実行
   順への依存を別の順序に付け替えるだけで、根本原因（`getStatusSnapshot()` が "now" 固定）は
   解消しないため不採用。
-

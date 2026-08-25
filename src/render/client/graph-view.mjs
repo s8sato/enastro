@@ -103,6 +103,9 @@ const PARTICLE_SPEED = 0.25;
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 8;
 const FIT_PADDING_PX = 80;
+/** How much closer than the whole-graph `fitToView()` scale a `?focus=`
+ * navigation (from a note page) zooms in on its target node. */
+const FOCUS_ZOOM_MULTIPLIER = 2;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -293,7 +296,10 @@ async function main() {
     // button is set to `--font-mono` + `white-space: pre` (site.css), each
     // character (including a space) occupies an identical column width, so
     // the button's rendered width no longer shifts when the label toggles.
-    const FLOW_LABELS = ["Flow: reverse of wikilink", "Flow: as wikilink"];
+    // "Flow: backlink"/"Flow: wikilink" happen to both be exactly 14
+    // characters long, so this padding is a no-op in practice, but the
+    // logic is kept generic rather than hardcoding "no padding needed".
+    const FLOW_LABELS = ["Flow: backlink", "Flow: wikilink"];
     const FLOW_LABEL_WIDTH = Math.max(...FLOW_LABELS.map((label) => label.length));
     function updateParticleDirectionToggleLabel() {
       const isDependencyFirst = particleDirection === "dependency-first";
@@ -522,6 +528,33 @@ async function main() {
   }
 
   fitToView();
+
+  // Focuses the graph on a single node: pans/zooms the camera so the node
+  // is centered, and reuses `highlightNode()` (defined below \u2014 function
+  // declarations are hoisted within `main()`, so calling it here is fine)
+  // to show its label and highlight its adjacent edges. The highlight is
+  // "sticky" (not cleared automatically), matching the existing
+  // touch-preview convention rather than introducing a new lifecycle.
+  function focusOnNode(node) {
+    const scale = clamp(world.scale.x * FOCUS_ZOOM_MULTIPLIER, MIN_ZOOM, MAX_ZOOM);
+    const centerScreen = { x: app.screen.width / 2, y: app.screen.height / 2 };
+    applyViewport(centerScreen, { x: node.x, y: node.y }, scale);
+    highlightNode(node);
+  }
+
+  // Navigating here from a note page (page.ts's `renderNav()`) appends
+  // `?focus=<note-id>` so the viewer lands centered on the note they came
+  // from, rather than the whole-graph overview `fitToView()` produces by
+  // default. An unknown/missing id (e.g. a stale link, or the graph/index
+  // pages which never set this param) is silently ignored, falling back to
+  // the normal `fitToView()` framing above. A node hidden by the active tag
+  // filter (there is none yet at this point in `main()`) is intentionally
+  // not un-hidden for this \u2014 the filter takes priority over the focus.
+  const focusId = new URLSearchParams(window.location.search).get("focus");
+  if (focusId) {
+    const focusNode = nodeById.get(focusId);
+    if (focusNode) focusOnNode(focusNode);
+  }
 
   // Tag filter UI (REQ-UX-002), mirroring the All Notes page's tag pills:
   // selecting one or more tags hides every node that doesn't have *all* of

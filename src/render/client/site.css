@@ -208,6 +208,16 @@ nav a:hover {
   color: var(--accent);
 }
 
+/* Non-clickable "you are here" nav item (page.ts's `renderNavItem()`) for
+   the page kind matching the current page \u2014 rendered in the same slot a
+   link would occupy so All notes/Graph view/HISTORY stay in the same
+   position across all three page kinds, rather than shifting when a page
+   omits its own self-link. */
+nav [aria-current="page"] {
+  color: var(--fg-muted);
+  cursor: default;
+}
+
 /* index.html renders nav / h1 / #search-box / #tag-filters / #no-results /
    #note-list directly as children of <body> — there's no wrapping
    <main>/.page the way note pages have <article>. `nav` is kept as a direct

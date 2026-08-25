@@ -34,6 +34,35 @@ function renderExplorationTrigger(): string {
 }
 
 /**
+ * Markup for a single `<nav>` item: either a real link, or (when `href`
+ * refers to the current page itself) an inert `<span aria-current="page">`
+ * with the same label/position. Used so every page kind's nav shows the
+ * exact same item set in the exact same order (`renderNav()` below) —
+ * previously each page kind silently omitted its own self-link, which
+ * shifted the remaining items (and the visual identity of the nav's
+ * leftmost slot) relative to the other two page kinds.
+ */
+function renderNavItem(href: string, label: string, isCurrent: boolean): string {
+  return isCurrent ? `<span aria-current="page">${label}</span>` : `<a href="${href}">${label}</a>`;
+}
+
+/**
+ * Shared `<nav>` markup for all three page kinds: always `All notes` →
+ * `Graph view` → the History trigger, in that fixed order/position
+ * (REQ-UX-009's history drawer position invariant relies on this). The
+ * page kind matching `current` renders its own item as a non-clickable
+ * `aria-current="page"` label instead of a link, rather than omitting it,
+ * so the nav's layout never changes shape across page kinds.
+ *
+ * `graphHref` for note pages includes a `?focus=<id>` query param (see
+ * `renderNotePage()`) so graph-view.mjs can pan/zoom to and highlight the
+ * note the viewer came from.
+ */
+function renderNav(current: "index" | "note" | "graph", allNotesHref: string, graphHref: string): string {
+  return `<nav>${renderNavItem(allNotesHref, "All notes", current === "index")} ${renderNavItem(graphHref, "Graph view", current === "graph")}${renderExplorationTrigger()}</nav>`;
+}
+
+/**
  * Markup for the exploration-status History drawer (REQ-EXPLORE-003),
  * shared across all three page kinds. Hidden by default and
  * populated/revealed by exploration.mjs (progressive enhancement, same
@@ -148,7 +177,7 @@ export function renderNotePage(params: RenderNotePageParams): string {
 ${THEME_FOUC_SCRIPT}
 </head>
 <body>
-<nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a>${renderExplorationTrigger()}</nav>
+${renderNav("note", "../index.html", `../graph.html?focus=${encodeURIComponent(node.id)}`)}
 ${renderExplorationBar("../assets/", "../")}
 ${renderThemeSwitcher("../assets/")}
 <p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span> <button type="button" class="mark-read-button" data-mark-read="${escapeHtml(node.id)}" title="Mark as read" hidden>Mark as read</button></p>
@@ -188,7 +217,7 @@ export function renderIndexPage(nodes: PublicNode[]): string {
 ${THEME_FOUC_SCRIPT}
 </head>
 <body>
-<nav><a href="graph.html">Graph view</a>${renderExplorationTrigger()}</nav>
+${renderNav("index", "index.html", "graph.html")}
 ${renderExplorationBar("assets/", "")}
 ${renderThemeSwitcher("assets/")}
 <header class="index-header">
@@ -228,7 +257,7 @@ ${THEME_FOUC_SCRIPT}
 </head>
 <body class="graph-shell">
 <div class="graph-header">
-<nav><a href="index.html">All notes</a>${renderExplorationTrigger()}</nav>
+${renderNav("graph", "index.html", "graph.html")}
 <div id="tag-filters"></div>
 </div>
 <button type="button" id="particle-direction-toggle" hidden></button>
