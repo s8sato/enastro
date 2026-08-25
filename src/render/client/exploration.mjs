@@ -397,7 +397,7 @@ function main() {
     const initialItem = document.createElement("li");
     const initialButton = document.createElement("button");
     initialButton.type = "button";
-    initialButton.append(buildHistoryRow("initial", "Initial state (nothing explored yet)"));
+    initialButton.append(buildHistoryRow("initial", "Initial state"));
     const isInitialActive = cursorTs === INITIAL_CURSOR_TS;
     initialButton.classList.toggle("active", isInitialActive);
     if (isInitialActive) {
@@ -453,14 +453,15 @@ function main() {
     const statusById = computeStatusAsOf(log, currentCursor());
     applyToNoteList(statusById);
     applyToMarkReadButton(statusById);
-    if (returnToNowButton) {
-      returnToNowButton.hidden = cursorTs === null;
-    }
+    // Return is always enabled (returning to "now" is safe/idempotent even
+    // while already live); Prune/Reset require an actual rewound cursor to
+    // act on, so they stay disabled (rather than hidden) until one is
+    // selected.
     if (resetHereButton) {
-      resetHereButton.hidden = cursorTs === null;
+      resetHereButton.disabled = cursorTs === null;
     }
     if (pruneHereButton) {
-      pruneHereButton.hidden = cursorTs === null;
+      pruneHereButton.disabled = cursorTs === null;
     }
     renderHistoryList();
     dispatchChanged(statusById, currentCursor());
@@ -490,7 +491,6 @@ function main() {
 
   returnToNowButton?.addEventListener("click", () => {
     cursorTs = null;
-    closeDrawer();
     update();
   });
 
@@ -509,7 +509,6 @@ function main() {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }
     cursorTs = null;
-    closeDrawer();
     update();
   });
 
@@ -521,7 +520,6 @@ function main() {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }
     cursorTs = null;
-    closeDrawer();
     update();
   });
 

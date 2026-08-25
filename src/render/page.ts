@@ -57,7 +57,12 @@ function renderExplorationTrigger(): string {
  *
  * The 3 rewind actions are ordered by increasing risk/irreversibility:
  * Return (safe) → Prune (destructive but discards only no-op history) →
- * Reset (destructive and can discard real history).
+ * Reset (destructive and can discard real history). All 3 stay visible at
+ * all times rather than appearing only once a past point is selected.
+ * Return is always enabled (returning to "now" is safe/idempotent even
+ * while already live); Prune/Reset start `disabled` (exploration.mjs's
+ * `update()` keeps them that way while live, since both require a rewound
+ * cursor to act on).
  */
 function renderExplorationBar(assetsPrefix: string, rootPrefix: string): string {
   return `<div id="exploration-bar" class="exploration-bar" data-search-index-href="${rootPrefix}search-index.json" hidden>
@@ -67,9 +72,9 @@ function renderExplorationBar(assetsPrefix: string, rootPrefix: string): string 
 <p id="exploration-storage-warning" class="exploration-warning" hidden><span class="exploration-icon" aria-hidden="true"></span><span data-text></span></p>
 <p id="exploration-missing-notice" class="exploration-notice" hidden><span class="exploration-icon" aria-hidden="true"></span><span data-text></span></p>
 <p id="exploration-auto-unread-notice" class="exploration-notice" hidden><span class="exploration-icon" aria-hidden="true"></span><span data-text></span></p>
-<button type="button" id="exploration-return-to-now" hidden>Return to now</button>
-<button type="button" id="exploration-prune-here" hidden>Prune until here</button>
-<button type="button" id="exploration-reset-here" hidden>Reset to here</button>
+<button type="button" id="exploration-return-to-now">Return to now</button>
+<button type="button" id="exploration-prune-here" disabled>Prune until here</button>
+<button type="button" id="exploration-reset-here" disabled>Reset to here</button>
 <ul id="exploration-history-list"></ul>
 </div>
 </div>

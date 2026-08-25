@@ -811,7 +811,11 @@ span.broken-link {
 
 /* The drawer itself: a right-edge sliding panel, translucent + blurred so
  * the content behind it (including the header-adjacent graph canvas)
- * stays visible, echoing the scrim above. */
+ * stays visible, echoing the scrim above. Kept nearly transparent (a low
+ * `--bg-elevated` mix rather than a strong tint) since a heavier gray wash
+ * made text unreadable against several themes; a stronger blur compensates
+ * for the reduced tint by still legibly separating the drawer's own text
+ * from whatever is scrolling/animating behind it. */
 #exploration-rewind-panel {
   position: fixed;
   top: 3.4rem; /* fallback until exploration.mjs measures the real header height */
@@ -824,8 +828,8 @@ span.broken-link {
    * (`#exploration-drawer-close`, ~2rem tall including its click target)
    * so the first warning/notice/button never crowds against it. */
   padding: 2.6rem 1rem 1.2rem;
-  background: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
-  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg-elevated) 20%, transparent);
+  backdrop-filter: blur(22px);
   border-left: 1px solid var(--border);
   transform: translateX(100%);
   transition: transform var(--transition);
@@ -907,7 +911,12 @@ span.broken-link {
  * history). Return stays theme-following/neutral; Prune/Reset borrow the
  * same fixed severity tokens as the warning/notice boxes above
  * (`--warn`/`--danger`) so risk level reads consistently across all 12
- * themes. */
+ * themes. All 3 are always visible (never `hidden`); Return is always
+ * enabled (returning to "now" is safe/idempotent even while already
+ * live), while Prune/Reset are `disabled` (exploration.mjs's `update()`)
+ * until a past point is actually selected, since both require a rewound
+ * cursor to act on.
+ */
 #exploration-return-to-now {
   display: block;
   width: 100%;
@@ -918,15 +927,6 @@ span.broken-link {
   border-radius: var(--radius);
   color: var(--fg);
   cursor: pointer;
-}
-
-/* Same `[hidden]` vs. `display: block` specificity issue as the
- * warning/notice boxes above — these 3 buttons are toggled via `hidden`
- * (REQ-EXPLORE-003) and need an explicit override to actually disappear. */
-#exploration-return-to-now[hidden],
-#exploration-prune-here[hidden],
-#exploration-reset-here[hidden] {
-  display: none;
 }
 
 #exploration-prune-here {
@@ -951,6 +951,15 @@ span.broken-link {
   border-radius: var(--radius);
   color: var(--danger);
   cursor: pointer;
+}
+
+/* Prune/Reset only (Return has no disabled state, see above) — dimmed and
+ * inert while no past point is selected, same pattern as
+ * `.mark-read-button:disabled`. */
+#exploration-prune-here:disabled,
+#exploration-reset-here:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 #exploration-history-list {

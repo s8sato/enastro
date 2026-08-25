@@ -129,7 +129,7 @@ describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
 describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPLORE-008)", () => {
   const STORAGE_KEY = "enastro:exploration:v1";
 
-  it("closes the rewind panel when returning to now", async () => {
+  it("keeps the rewind panel open after returning to now, showing the cursor is back at 'now'", async () => {
     await page.goto(`${baseUrl}/notes/note-a.html`);
     const markReadButton = page.locator("[data-mark-read]");
     await expect.poll(() => markReadButton.isVisible()).toBe(true);
@@ -142,8 +142,11 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     const panel = page.locator("#exploration-rewind-panel");
     await expect.poll(() => panel.isVisible()).toBe(true);
 
+    // No button click (Return/Prune/Reset) closes the drawer — the cursor
+    // position stays visible so the user can see the effect of what they
+    // just clicked without having to reopen it.
     await page.click("#exploration-return-to-now");
-    await expect.poll(() => panel.isHidden()).toBe(true);
+    await expect.poll(() => panel.isVisible()).toBe(true);
   });
 
   it("highlights the history entry currently being viewed via rewind", async () => {
