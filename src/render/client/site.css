@@ -1305,7 +1305,15 @@ span.broken-link {
   }
 
   body:has(#note-list) > nav {
+    /* Must also override the desktop `body:has(#note-list) > nav` rule's
+       `padding-inline: 1.25rem` here — `:has()`'s specificity equals that
+       of its argument, so `:has(#note-list)` carries ID-level specificity
+       and is NOT overridden by the plain `nav { padding: 0.7rem 1rem; }`
+       rule above despite appearing later in this same media query. Without
+       this, All Notes' nav sits 0.25rem further from the edge than the
+       note/graph pages' nav on mobile (2026-08-26 fix). */
     margin-inline: -1rem;
+    padding-inline: 1rem;
   }
 }
 
