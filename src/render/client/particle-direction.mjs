@@ -1,7 +1,7 @@
 /**
  * User-configurable graph particle travel direction (graph.html only).
  *
- * By default (`"dependency-first"`), each edge's energy particle travels
+ * By default (`"backlink"`), each edge's energy particle travels
  * from the *referenced* note (the wikilink target — a dependency) toward
  * the *referencing* note (the wikilink source — its dependent), so the
  * particle's motion matches the direction ideas are built up in: from
@@ -17,15 +17,16 @@
  *
  * Entirely client-side, following the same `localStorage`-only pattern as
  * the theme switcher (REQ-UX-011) and exploration status (ADR-0014): the
- * build never bakes in a specific direction, and the choice is never
- * written to any build artifact.
+ * build never bakes in a specific direction (beyond an optional vault-level
+ * default from `enastro.config.json`'s `defaultParticleDirection`, ADR-0016),
+ * and the choice is never written to any build artifact.
  */
 
 export const STORAGE_KEY = "enastro:particle-direction:v1";
 
-export const DEFAULT_DIRECTION = "dependency-first";
+export const DEFAULT_DIRECTION = "wikilink";
 
-const VALID_DIRECTIONS = ["dependency-first", "wikilink"];
+const VALID_DIRECTIONS = ["backlink", "wikilink"];
 
 /** @param {string} value */
 export function isValidDirection(value) {

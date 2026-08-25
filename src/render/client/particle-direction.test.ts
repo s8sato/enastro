@@ -57,7 +57,7 @@ beforeEach(() => {
 
 describe("isValidDirection", () => {
   it("accepts the two known directions", () => {
-    expect(isValidDirection("dependency-first")).toBe(true);
+    expect(isValidDirection("backlink")).toBe(true);
     expect(isValidDirection("wikilink")).toBe(true);
   });
 
@@ -96,8 +96,8 @@ describe("resolveParticleEndpoints", () => {
   const source = { id: "note-a" };
   const target = { id: "note-b" };
 
-  it("under 'dependency-first' (default), departs from target (the dependency) toward source (the dependent)", () => {
-    expect(resolveParticleEndpoints("dependency-first", source, target)).toEqual({ from: target, to: source });
+  it("under 'backlink', departs from target (the dependency) toward source (the dependent)", () => {
+    expect(resolveParticleEndpoints("backlink", source, target)).toEqual({ from: target, to: source });
   });
 
   it("under 'wikilink', departs from source (referencing note) toward target (referenced note)", () => {

@@ -59,6 +59,11 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
   const warnings = [...titleWarnings, ...projectionWarnings];
 
   const config = loadVaultConfig(vaultDir);
+  const siteConfig = {
+    siteTitle: config.siteTitle,
+    defaultTheme: config.defaultTheme,
+    defaultParticleDirection: config.defaultParticleDirection,
+  };
   const attachments = discoverAttachments(vaultDir);
   const attachmentById = new Map(attachments.map((attachment) => [attachment.id, attachment]));
   // Only allowlisted attachments that actually exist in the vault are
@@ -115,7 +120,7 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
       ).values(),
     ].sort((a, b) => a.id.localeCompare(b.id));
 
-    const page = renderNotePage({ node, bodyHtml, backlinks: backlinkNodes, modifiedAt, modifiedAtEpochMs });
+    const page = renderNotePage({ node, bodyHtml, backlinks: backlinkNodes, modifiedAt, modifiedAtEpochMs, siteConfig });
     const notePath = path.join(outDir, "notes", `${node.id}.html`);
     mkdirSync(path.dirname(notePath), { recursive: true });
     writeFileSync(notePath, page, "utf-8");
@@ -123,8 +128,8 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
     searchEntries.push(buildSearchIndexEntry(node, bodyHtml, modifiedAt));
   }
 
-  writeFileSync(path.join(outDir, "index.html"), renderIndexPage(sortedNodes), "utf-8");
-  writeFileSync(path.join(outDir, "graph.html"), renderGraphPage(), "utf-8");
+  writeFileSync(path.join(outDir, "index.html"), renderIndexPage(sortedNodes, siteConfig), "utf-8");
+  writeFileSync(path.join(outDir, "graph.html"), renderGraphPage(siteConfig), "utf-8");
 
   // Layout coordinates are precomputed at build time, over the public
   // projection only (REQ-PUB-002), via a deterministic force simulation

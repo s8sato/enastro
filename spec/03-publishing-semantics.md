@@ -30,6 +30,18 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 - allowlist された添付ファイルは、元の vault 相対パスを保持したまま `dist/<同じ相対パス>` にコピーされる。
 - 公開ノートが非 allowlist の添付ファイルを参照した場合、非公開ノートへの参照（§2）と同様に完全に除去される（表示テキストを含む）。
 
+`enastro.config.json` にはこの他、ビルド時のサイト表示デフォルトを指定する以下のフィールドがある
+（[ADR-0016](../decisions/ADR-0016-vault-config-driven-site-defaults.md)、REQ-UX-011/012/013）:
+
+- `siteTitle: string`（既定値 `"Notes"`） — `index.html` の `<title>`/`<h1>` と `graph.html` の
+  `<title>` に反映される。
+- `defaultTheme: string`（既定値 `"moon"`） — 12種のテーマ id のいずれか。初回訪問時の初期テーマ。
+- `defaultParticleDirection: "wikilink" | "backlink"`（既定値 `"wikilink"`） — graph ページの
+  初回訪問時の初期粒子進行方向。
+
+これら3フィールドはいずれも省略可能で、ユーザーが `localStorage` に保存した明示的な選択は
+常にこれらのビルド時デフォルトより優先される。
+
 ## 4. 公開リポジトリに配置してよい内容 [DECIDED]
 
 - 公開用リポジトリ / 出力先には、ビルド済みの静的 artifact（HTML/CSS/JS/JSON 等）のみを配置する（REQ-PUB-007）。

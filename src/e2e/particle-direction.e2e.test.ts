@@ -38,45 +38,20 @@ afterAll(async () => {
 afterEach(async () => {
   // Particle direction is pure client-side preference state (REQ-UX-012);
   // reset it between tests so each test starts from the default
-  // ("dependency-first").
+  // ("wikilink" — `fixtures/basic-vault` has no `enastro.config.json`, so
+  // the config-level default of "wikilink" applies, ADR-0016).
   await page.evaluate(() => {
     localStorage.removeItem("enastro:particle-direction:v1");
   });
 });
 
 describe("browser E2E: graph particle direction toggle (REQ-UX-012)", () => {
-  it("defaults to 'dependency-first', with the particle departing from the referenced note (note-b) toward the referencing note (note-a)", async () => {
+  it("defaults to 'wikilink', with the particle departing from the referencing note (note-a) toward the referenced note (note-b)", async () => {
     await page.goto(`${baseUrl}/graph.html`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
       .toBe("true");
 
-    expect(
-      await page.evaluate(() => (globalThis as any).window.__enastroGraph.getParticleDirection()),
-    ).toBe("dependency-first");
-    expect(
-      await page.evaluate(() =>
-        (globalThis as any).window.__enastroGraph.getParticleFromId("note-a", "note-b"),
-      ),
-    ).toBe("note-b");
-  });
-
-  it("toggles to 'wikilink', persists the choice, and flips the particle's departure node", async () => {
-    await page.goto(`${baseUrl}/graph.html`);
-    await expect
-      .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
-      .toBe("true");
-
-    const toggle = page.locator("#particle-direction-toggle");
-    await expect.poll(() => toggle.isVisible()).toBe(true);
-    expect(await toggle.getAttribute("aria-pressed")).toBe("true");
-
-    await toggle.click();
-
-    expect(await toggle.getAttribute("aria-pressed")).toBe("false");
-    await expect
-      .poll(() => page.evaluate(() => localStorage.getItem("enastro:particle-direction:v1")))
-      .toBe("wikilink");
     expect(
       await page.evaluate(() => (globalThis as any).window.__enastroGraph.getParticleDirection()),
     ).toBe("wikilink");
@@ -85,6 +60,32 @@ describe("browser E2E: graph particle direction toggle (REQ-UX-012)", () => {
         (globalThis as any).window.__enastroGraph.getParticleFromId("note-a", "note-b"),
       ),
     ).toBe("note-a");
+  });
+
+  it("toggles to 'backlink', persists the choice, and flips the particle's departure node", async () => {
+    await page.goto(`${baseUrl}/graph.html`);
+    await expect
+      .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
+      .toBe("true");
+
+    const toggle = page.locator("#particle-direction-toggle");
+    await expect.poll(() => toggle.isVisible()).toBe(true);
+    expect(await toggle.getAttribute("aria-pressed")).toBe("false");
+
+    await toggle.click();
+
+    expect(await toggle.getAttribute("aria-pressed")).toBe("true");
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem("enastro:particle-direction:v1")))
+      .toBe("backlink");
+    expect(
+      await page.evaluate(() => (globalThis as any).window.__enastroGraph.getParticleDirection()),
+    ).toBe("backlink");
+    expect(
+      await page.evaluate(() =>
+        (globalThis as any).window.__enastroGraph.getParticleFromId("note-a", "note-b"),
+      ),
+    ).toBe("note-b");
 
     await page.reload();
     await expect
@@ -92,8 +93,8 @@ describe("browser E2E: graph particle direction toggle (REQ-UX-012)", () => {
       .toBe("true");
     expect(
       await page.evaluate(() => (globalThis as any).window.__enastroGraph.getParticleDirection()),
-    ).toBe("wikilink");
-    expect(await page.locator("#particle-direction-toggle").getAttribute("aria-pressed")).toBe("false");
+    ).toBe("backlink");
+    expect(await page.locator("#particle-direction-toggle").getAttribute("aria-pressed")).toBe("true");
   });
 
   it("does not change the graph IR: backlinks/edges stay based on edge.source/edge.target regardless of the toggle", async () => {

@@ -4,7 +4,7 @@
  * edges, with a small animated "energy particle" travelling along each
  * edge. The particle's travel direction is user-configurable (REQ-UX-012,
  * `particle-direction.mjs`) via a graph-page-only toggle, defaulting to
- * "dependency-first" (referenced note \u2192 referencing note) rather than
+ * "backlink" (referenced note \u2192 referencing note) rather than
  * the literal wikilink/embed direction. Runs directly in the browser as an
  * ES module; no bundler/build step needed — pixi.js is vendored as a
  * single self-contained ESM bundle (`pixi.min.mjs`, copied from the
@@ -202,7 +202,7 @@ async function main() {
 
   // One energy particle per edge, animated along the direction chosen by
   // the user via the particle-direction toggle (REQ-UX-012): by default
-  // ("dependency-first") from the *referenced* note (a dependency) toward
+  // ("backlink") from the *referenced* note (a dependency) toward
   // the *referencing* note (its dependent) — matching the direction ideas
   // are built up in — or, if switched to "wikilink", along the literal
   // wikilink/embed direction (edge.source -> edge.target). Either way this
@@ -212,7 +212,16 @@ async function main() {
   // looping independently on its own, previously randomized, phase) so
   // every edge fires its particle in sync — the whole graph "pulses"
   // together instead of looking like scattered, independent traffic.
-  let particleDirection = readStoredDirection() ?? DEFAULT_DIRECTION;
+  //
+  // Default resolution order: the viewer's own stored choice, then the
+  // vault's build-time default (`enastro.config.json`'s
+  // `defaultParticleDirection`, ADR-0016 — baked into this button's
+  // `data-default-direction` attribute by page.ts), then this module's own
+  // hardcoded fallback (`DEFAULT_DIRECTION`), for contexts without that
+  // element (e.g. unit tests exercising this module in isolation).
+  const particleDirectionToggle = document.getElementById("particle-direction-toggle");
+  let particleDirection =
+    readStoredDirection() ?? particleDirectionToggle?.dataset.defaultDirection ?? DEFAULT_DIRECTION;
   const particleLayer = new PIXI.Container();
   world.addChild(particleLayer);
   const particles = validEdges.map(({ source, target }) => {
@@ -289,7 +298,6 @@ async function main() {
   // is "from"/"to" for every particle (via `resolveParticleEndpoints`
   // above) and re-applies exploration dimming — no rebuild of the pixi
   // scene, no change to the underlying graph IR.
-  const particleDirectionToggle = document.getElementById("particle-direction-toggle");
   if (particleDirectionToggle) {
     // Both labels are padded (with `padEnd`) to the same character length
     // as the longer one, using ordinary trailing spaces — since this
@@ -302,10 +310,10 @@ async function main() {
     const FLOW_LABELS = ["Flow: backlink", "Flow: wikilink"];
     const FLOW_LABEL_WIDTH = Math.max(...FLOW_LABELS.map((label) => label.length));
     function updateParticleDirectionToggleLabel() {
-      const isDependencyFirst = particleDirection === "dependency-first";
-      const label = isDependencyFirst ? FLOW_LABELS[0] : FLOW_LABELS[1];
+      const isBacklink = particleDirection === "backlink";
+      const label = isBacklink ? FLOW_LABELS[0] : FLOW_LABELS[1];
       particleDirectionToggle.textContent = label.padEnd(FLOW_LABEL_WIDTH, " ");
-      particleDirectionToggle.setAttribute("aria-pressed", String(isDependencyFirst));
+      particleDirectionToggle.setAttribute("aria-pressed", String(isBacklink));
     }
     // Fixed to the bottom-right corner (site.css) — no runtime positioning
     // needed here, unlike the earlier layout that stacked this above the
@@ -313,7 +321,7 @@ async function main() {
     updateParticleDirectionToggleLabel();
     particleDirectionToggle.hidden = false;
     particleDirectionToggle.addEventListener("click", () => {
-      particleDirection = particleDirection === "dependency-first" ? "wikilink" : "dependency-first";
+      particleDirection = particleDirection === "backlink" ? "wikilink" : "backlink";
       storeDirection(particleDirection);
       updateParticleDirectionToggleLabel();
       applyExploration();

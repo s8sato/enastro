@@ -82,8 +82,9 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 | REQ-EXPLORE-007 | unit test（`parseModifiedAt`, search-index.json 同期ロジック）+ browser E2E test（ID不一致通知、更新されたノートの自動unread通知、fetch失敗時のフォールバック） | basic-vault |
 | REQ-EXPLORE-008 | unit test（`resetLogAt`, `squashStateUntil`）+ browser E2E test（Reset to here / Squash until here の確認ダイアログ・実行後の状態） | basic-vault |
 | REQ-EXPLORE-009 | unit test（`src/render/client/exploration.test.ts`、カーソル位置の永続化・now/Snapshot 判定・ボタン活性条件）+ browser E2E test（`src/e2e/exploration.e2e.test.ts`、ページ遷移/リロードをまたぐカーソル・ドロワー開閉状態の保持） | basic-vault |
-| REQ-UX-011 | unit test（`src/render/client/theme-switcher.test.ts`、テーマ選択の永続化・適用ロジック）+ browser E2E test（`src/e2e/theme-switcher.e2e.test.ts`、ダイヤル/`<select>` からの選択・3ページ間での一貫性）+ human review（12テーマの見た目） | basic-vault |
-| REQ-UX-012 | unit test（`src/render/client/particle-direction.test.ts`、方向トグルのロジック・backlink/edge データの不変性）+ browser E2E test（`src/e2e/particle-direction.e2e.test.ts`、トグル操作と粒子発射元の切り替わり） | demo-vault, benchmark-vault |
+| REQ-UX-011 | unit test（`src/render/client/theme-switcher.test.ts`、テーマ選択の永続化・適用ロジック）+ unit test（`src/vault/config.test.ts`、`defaultTheme` のバリデーション）+ browser E2E test（`src/e2e/theme-switcher.e2e.test.ts`、ダイヤル/`<select>` からの選択・3ページ間での一貫性、`src/e2e/site-config.e2e.test.ts`、`defaultTheme` の初回訪問時反映）+ human review（12テーマの見た目） | basic-vault |
+| REQ-UX-012 | unit test（`src/render/client/particle-direction.test.ts`、方向トグルのロジック・backlink/edge データの不変性）+ unit test（`src/vault/config.test.ts`、`defaultParticleDirection` のバリデーション）+ browser E2E test（`src/e2e/particle-direction.e2e.test.ts`、トグル操作と粒子発射元の切り替わり・既定値、`src/e2e/site-config.e2e.test.ts`、`defaultParticleDirection` の初回訪問時反映） | demo-vault, benchmark-vault |
+| REQ-UX-013 | unit test（`src/vault/config.test.ts`、`siteTitle` のバリデーション）+ browser E2E test（`src/e2e/site-config.e2e.test.ts`、`index.html`/`graph.html` の `<title>`/`<h1>` への反映） | basic-vault |
 
 ## 3. 引き続き自動検証を実施しない項目 [DEFERRED]
 

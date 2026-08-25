@@ -3,6 +3,23 @@
 本プロジェクトのバージョンは [Semantic Versioning](https://semver.org/lang/ja/) に準拠する。
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) を参考にする。
 
+## [Unreleased]
+
+### 追加
+
+- **vault 単位のビルド時サイトデフォルト**: `enastro.config.json` に `siteTitle` / `defaultTheme` /
+  `defaultParticleDirection` を追加。`siteTitle`（既定値 `"Notes"`）は `index.html` の
+  `<title>`/`<h1>` と `graph.html` の `<title>` に反映される。`defaultTheme`（既定値 `"moon"`）・
+  `defaultParticleDirection`（既定値 `"wikilink"`）は、`localStorage` に保存済みの選択が無い
+  初回訪問時の初期値としてのみ使われ、ユーザーの明示的な選択は常にこれより優先される
+  （REQ-UX-011/012/013、[ADR-0016](decisions/ADR-0016-vault-config-driven-site-defaults.md)）。
+
+### 変更
+
+- **particle-direction の既定値・内部語彙**: graph ページの粒子進行方向の既定値を
+  「dependency-first」から `wikilink` に変更。内部コード語彙も UI ラベルと整合させるため
+  `dependency-first` から `backlink` に統一した(挙動は不変、名称のみの変更)。
+
 ## [0.3.1] - 2026-08-25
 
 v0.3.0 の探索ステータス(History)機能・テーマ切り替え機能を仕上げる修正・改善リリース。

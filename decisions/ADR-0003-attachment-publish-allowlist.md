@@ -27,6 +27,9 @@ DECIDED
 - vault 直下に配置する `enastro.config.json` の `publishAttachments` フィールド（vault相対パスの
   完全一致の文字列配列）で指定する。glob/パターンマッチは v0.1 では DEFERRED とする（完全一致のみ、
   誤って広範囲に公開するリスクを避けるため）。
+- `enastro.config.json` にはこの他、ビルド時のサイト表示デフォルトを指定する `siteTitle` /
+  `defaultTheme` / `defaultParticleDirection` フィールドも追加された
+  （[ADR-0016](ADR-0016-vault-config-driven-site-defaults.md)）。
 - サイドカーマーカーファイル方式や添付専用 frontmatter 方式ではなく config ファイル方式を選んだ理由:
   設定が一箇所に集約されプライバシー面で監査しやすく、config を書き忘れた場合は自動的に非公開
   （private by default）になるため。

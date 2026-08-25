@@ -1,6 +1,26 @@
 import type { PublicNode } from "../projection/types.js";
 import { escapeHtml } from "./escape-html.js";
 
+/**
+ * Vault-level build-time defaults (ADR-0016) baked into each page: the
+ * viewer's own stored choice (`localStorage`) always takes precedence over
+ * these, and these are never themselves written to any build artifact
+ * beyond the initial HTML they're embedded in (REQ-UX-011/012/013).
+ */
+export interface RenderSiteConfig {
+  /** `enastro.config.json`'s `siteTitle` (default `"Notes"`). Applied to
+   * the All Notes page's `<h1>`/`<title>` and the Graph view's `<title>`;
+   * note pages keep their own note title. */
+  siteTitle: string;
+  /** `enastro.config.json`'s `defaultTheme` (default `"moon"`), used only
+   * when no theme is yet stored in `localStorage`. */
+  defaultTheme: string;
+  /** `enastro.config.json`'s `defaultParticleDirection` (default
+   * `"wikilink"`), used only on `graph.html`, and only when no direction is
+   * yet stored in `localStorage`. */
+  defaultParticleDirection: "wikilink" | "backlink";
+}
+
 export interface RenderNotePageParams {
   node: PublicNode;
   bodyHtml: string;
@@ -18,6 +38,7 @@ export interface RenderNotePageParams {
    * `local-time.mjs` can recompute it in the viewer's local timezone.
    * `undefined` iff `modifiedAt` is. */
   modifiedAtEpochMs: number | undefined;
+  siteConfig: RenderSiteConfig;
 }
 
 /**
@@ -114,14 +135,20 @@ function renderExplorationBar(assetsPrefix: string, rootPrefix: string): string 
  * FOUC-prevention script for the theme switcher (REQ-UX-011). Small,
  * inline, and *not* externalized (unlike the module scripts below) so it
  * runs synchronously before first paint: it reads the persisted theme
- * choice from `localStorage` and applies `data-theme` to `<html>`
- * immediately, before `site.css` would otherwise paint the default (Moon)
- * theme. Without JavaScript (or before it runs), the page simply renders
- * in the Moon theme — the same progressive-enhancement approach as
- * `local-time.mjs`. Kept as a single literal shared by all three page
- * kinds so their FOUC-prevention behavior can never drift apart.
+ * choice from `localStorage`, falling back to the vault's build-time
+ * `defaultTheme` (`enastro.config.json`, ADR-0016) when nothing is stored
+ * yet, and applies `data-theme` to `<html>` immediately, before `site.css`
+ * would otherwise paint the default (Moon) theme. Without JavaScript (or
+ * before it runs), the page simply renders in the Moon theme — the same
+ * progressive-enhancement approach as `local-time.mjs`. `theme-switcher.mjs`
+ * itself doesn't need to know about `defaultTheme` separately: it already
+ * falls back to whatever `data-theme` this script applied
+ * (`document.documentElement.dataset.theme`) before its own hardcoded
+ * default.
  */
-const THEME_FOUC_SCRIPT = `<script>(function(){try{var t=localStorage.getItem("enastro:theme:v1");if(t)document.documentElement.dataset.theme=t;}catch(e){}})();</script>`;
+function themeFoucScript(defaultTheme: string): string {
+  return `<script>(function(){try{var t=localStorage.getItem("enastro:theme:v1");document.documentElement.dataset.theme=t||${JSON.stringify(defaultTheme)};}catch(e){}})();</script>`;
+}
 
 /**
  * Markup for the theme switcher trigger (REQ-UX-011), shared across all
@@ -142,7 +169,7 @@ function renderThemeSwitcher(assetsPrefix: string): string {
 
 /** Assembles a full HTML page for a single published note (REQ-UX-001~004, REQ-UX-006, REQ-UX-007, REQ-UX-008). */
 export function renderNotePage(params: RenderNotePageParams): string {
-  const { node, bodyHtml, backlinks, modifiedAt, modifiedAtEpochMs } = params;
+  const { node, bodyHtml, backlinks, modifiedAt, modifiedAtEpochMs, siteConfig } = params;
 
   const tagsHtml = node.tags.length
     ? `<ul class="tags">${node.tags
@@ -174,7 +201,7 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(node.title)}</title>
 <link rel="stylesheet" href="../assets/site.css">
-${THEME_FOUC_SCRIPT}
+${themeFoucScript(siteConfig.defaultTheme)}
 </head>
 <body>
 ${renderNav("note", "../index.html", `../graph.html?focus=${encodeURIComponent(node.id)}`)}
@@ -199,29 +226,30 @@ ${backlinksHtml}
  * usable without JavaScript (progressive enhancement); search.mjs only
  * hides/shows entries in place.
  */
-export function renderIndexPage(nodes: PublicNode[]): string {
+export function renderIndexPage(nodes: PublicNode[], siteConfig: RenderSiteConfig): string {
   const items = nodes
     .map(
       (node) =>
         `<li data-id="${escapeHtml(node.id)}"><a href="notes/${node.id}.html">${escapeHtml(node.title)}</a></li>`,
     )
     .join("");
+  const siteTitle = escapeHtml(siteConfig.siteTitle);
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>enastro</title>
+<title>${siteTitle}</title>
 <link rel="stylesheet" href="assets/site.css">
-${THEME_FOUC_SCRIPT}
+${themeFoucScript(siteConfig.defaultTheme)}
 </head>
 <body>
 ${renderNav("index", "index.html", "graph.html")}
 ${renderExplorationBar("assets/", "")}
 ${renderThemeSwitcher("assets/")}
 <header class="index-header">
-<h1>Notes</h1>
+<h1>${siteTitle}</h1>
 <input type="search" id="search-box" placeholder="Search notes...">
 <div id="tag-filters"></div>
 </header>
@@ -245,22 +273,22 @@ ${renderThemeSwitcher("assets/")}
  * `graph-view.mjs`/`particle-direction.mjs` — this page is graph-only, no
  * equivalent markup on index/note pages.
  */
-export function renderGraphPage(): string {
+export function renderGraphPage(siteConfig: RenderSiteConfig): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>enastro · Graph view</title>
+<title>${escapeHtml(siteConfig.siteTitle)} · Graph view</title>
 <link rel="stylesheet" href="assets/site.css">
-${THEME_FOUC_SCRIPT}
+${themeFoucScript(siteConfig.defaultTheme)}
 </head>
 <body class="graph-shell">
 <div class="graph-header">
 ${renderNav("graph", "index.html", "graph.html")}
 <div id="tag-filters"></div>
 </div>
-<button type="button" id="particle-direction-toggle" hidden></button>
+<button type="button" id="particle-direction-toggle" data-default-direction="${escapeHtml(siteConfig.defaultParticleDirection)}" hidden></button>
 ${renderExplorationBar("assets/", "")}
 ${renderThemeSwitcher("assets/")}
 <div id="graph-canvas-container"></div>
