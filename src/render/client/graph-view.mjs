@@ -542,12 +542,17 @@ async function main() {
   // declarations are hoisted within `main()`, so calling it here is fine)
   // to show its label and highlight its adjacent edges. The highlight is
   // "sticky" (not cleared automatically), matching the existing
-  // touch-preview convention rather than introducing a new lifecycle.
+  // touch-preview convention rather than introducing a new lifecycle. It
+  // also arms this node as the touch preview (`armedTouchNodeId`), so that
+  // on touch/pen a subsequent tap on a *different* node correctly clears
+  // this node's highlight instead of leaving it stuck alongside the newly
+  // tapped node's highlight.
   function focusOnNode(node) {
     const scale = clamp(world.scale.x * FOCUS_ZOOM_MULTIPLIER, MIN_ZOOM, MAX_ZOOM);
     const centerScreen = { x: app.screen.width / 2, y: app.screen.height / 2 };
     applyViewport(centerScreen, { x: node.x, y: node.y }, scale);
     highlightNode(node);
+    armedTouchNodeId = node.id;
   }
 
   // Navigating here from a note page (page.ts's `renderNav()`) appends
