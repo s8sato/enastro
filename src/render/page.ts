@@ -21,27 +21,55 @@ export interface RenderNotePageParams {
 }
 
 /**
- * Markup for the exploration-status rewind UI (REQ-EXPLORE-003), shared
- * across all three page kinds. Hidden by default and populated/revealed by
- * exploration.mjs (progressive enhancement, same pattern as local-time.mjs);
- * without JavaScript it simply stays invisible and inert.
+ * Markup for the History drawer's trigger button (REQ-EXPLORE-003),
+ * meant to be embedded directly inside each page kind's `<nav>` (rather
+ * than floating, as it used to) — `margin-left: auto` (site.css) pushes it
+ * to the nav's right edge. Hidden by default and revealed by
+ * exploration.mjs (progressive enhancement, same pattern as
+ * local-time.mjs); without JavaScript it simply stays invisible and inert,
+ * since there is nothing for it to open.
+ */
+function renderExplorationTrigger(): string {
+  return `<button type="button" id="exploration-rewind-toggle" hidden>HISTORY</button>`;
+}
+
+/**
+ * Markup for the exploration-status History drawer (REQ-EXPLORE-003),
+ * shared across all three page kinds. Hidden by default and
+ * populated/revealed by exploration.mjs (progressive enhancement, same
+ * pattern as local-time.mjs); without JavaScript it simply stays invisible
+ * and inert. The trigger button that opens this drawer lives separately,
+ * inside each page's `<nav>` — see `renderExplorationTrigger()`.
  *
  * `rootPrefix` is the relative path back to the site root (e.g. `"../"` for
  * note pages, `""` for index/graph pages) — needed so exploration.mjs can
  * fetch the already-public `search-index.json` (for ID-mismatch detection
  * and stale-read detection, REQ-EXPLORE-006/007) regardless of which page
  * kind it's running on.
+ *
+ * Layout (REQ-UX / history-drawer mock): a translucent right-edge sliding
+ * panel (`#exploration-rewind-panel`) with its own scrim
+ * (`#exploration-drawer-scrim`), positioned *below* the header rather than
+ * covering it — exploration.mjs measures the header's real height at
+ * runtime and sets both elements' `top` accordingly, since it differs
+ * between page kinds (the graph page's `.graph-header` includes a
+ * variable-height tag-filter row that plain `<nav>` doesn't have).
+ *
+ * The 3 rewind actions are ordered by increasing risk/irreversibility:
+ * Return (safe) → Prune (destructive but discards only no-op history) →
+ * Reset (destructive and can discard real history).
  */
 function renderExplorationBar(assetsPrefix: string, rootPrefix: string): string {
   return `<div id="exploration-bar" class="exploration-bar" data-search-index-href="${rootPrefix}search-index.json" hidden>
-<button type="button" id="exploration-rewind-toggle">History</button>
+<div id="exploration-drawer-scrim"></div>
 <div id="exploration-rewind-panel" hidden>
-<p id="exploration-storage-warning" class="exploration-warning" hidden></p>
-<p id="exploration-missing-notice" class="exploration-notice" hidden></p>
-<p id="exploration-auto-unread-notice" class="exploration-notice" hidden></p>
+<button type="button" id="exploration-drawer-close" aria-label="Close history">✕</button>
+<p id="exploration-storage-warning" class="exploration-warning" hidden><span class="exploration-icon" aria-hidden="true"></span><span data-text></span></p>
+<p id="exploration-missing-notice" class="exploration-notice" hidden><span class="exploration-icon" aria-hidden="true"></span><span data-text></span></p>
+<p id="exploration-auto-unread-notice" class="exploration-notice" hidden><span class="exploration-icon" aria-hidden="true"></span><span data-text></span></p>
 <button type="button" id="exploration-return-to-now" hidden>Return to now</button>
-<button type="button" id="exploration-reset-here" hidden>Reset to here</button>
 <button type="button" id="exploration-prune-here" hidden>Prune until here</button>
+<button type="button" id="exploration-reset-here" hidden>Reset to here</button>
 <ul id="exploration-history-list"></ul>
 </div>
 </div>
@@ -65,11 +93,10 @@ const THEME_FOUC_SCRIPT = `<script>(function(){try{var t=localStorage.getItem("e
  * Markup for the theme switcher trigger (REQ-UX-011), shared across all
  * three page kinds. Deliberately kept independent of `<nav>` (rather than
  * a nav link) and styled as a small floating widget fixed to the
- * bottom-left corner — symmetric with the exploration bar's bottom-right
- * placement (`.exploration-bar`) — so neither widget competes with the
- * page's nav/tag-filter chrome or with each other. The actual dial/select
- * UI is built by theme-switcher.mjs (progressive enhancement); without
- * JavaScript only the inert trigger button exists.
+ * bottom-left corner, so it doesn't compete with the page's nav/tag-filter
+ * chrome. The actual dial/select UI is built by theme-switcher.mjs
+ * (progressive enhancement); without JavaScript only the inert trigger
+ * button exists.
  */
 function renderThemeSwitcher(assetsPrefix: string): string {
   return `<div id="theme-switcher" class="theme-switcher" hidden>
@@ -116,7 +143,7 @@ export function renderNotePage(params: RenderNotePageParams): string {
 ${THEME_FOUC_SCRIPT}
 </head>
 <body>
-<nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a></nav>
+<nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a>${renderExplorationTrigger()}</nav>
 ${renderExplorationBar("../assets/", "../")}
 ${renderThemeSwitcher("../assets/")}
 <p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span> <button type="button" class="mark-read-button" data-mark-read="${escapeHtml(node.id)}" title="Mark as read" hidden>Mark as read</button></p>
@@ -156,7 +183,7 @@ export function renderIndexPage(nodes: PublicNode[]): string {
 ${THEME_FOUC_SCRIPT}
 </head>
 <body>
-<nav><a href="graph.html">Graph view</a></nav>
+<nav><a href="graph.html">Graph view</a>${renderExplorationTrigger()}</nav>
 ${renderExplorationBar("assets/", "")}
 ${renderThemeSwitcher("assets/")}
 <header class="index-header">
@@ -196,7 +223,7 @@ ${THEME_FOUC_SCRIPT}
 </head>
 <body class="graph-shell">
 <div class="graph-header">
-<nav><a href="index.html">All notes</a></nav>
+<nav><a href="index.html">All notes</a>${renderExplorationTrigger()}</nav>
 <div id="tag-filters"></div>
 </div>
 <button type="button" id="particle-direction-toggle" hidden></button>

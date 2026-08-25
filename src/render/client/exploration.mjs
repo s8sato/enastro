@@ -223,6 +223,8 @@ function main() {
 
   const toggleButton = document.getElementById("exploration-rewind-toggle");
   const panel = document.getElementById("exploration-rewind-panel");
+  const scrim = document.getElementById("exploration-drawer-scrim");
+  const closeButton = document.getElementById("exploration-drawer-close");
   const historyList = document.getElementById("exploration-history-list");
   const returnToNowButton = document.getElementById("exploration-return-to-now");
   const resetHereButton = document.getElementById("exploration-reset-here");
@@ -235,14 +237,77 @@ function main() {
   const readAtValue = readAtSpan?.querySelector("[data-read-value]");
   const readAtSep = document.querySelector("[data-read-sep]");
 
+  if (toggleButton) toggleButton.hidden = false;
+
   function currentCursor() {
     return cursorTs ?? Infinity;
   }
 
   function showWarning(message) {
     if (!warning) return;
-    warning.textContent = message;
+    const textEl = warning.querySelector("[data-text]");
+    if (textEl) textEl.textContent = message;
     warning.hidden = false;
+  }
+
+  /**
+   * Keeps the drawer/scrim positioned *below* the header (REQ-UX /
+   * history-drawer mock) rather than covering it. The header's real
+   * height differs between page kinds (the graph page's `.graph-header`
+   * includes a variable-height tag-filter row that plain `<nav>` doesn't
+   * have), so this measures it at runtime instead of hardcoding a value —
+   * the same approach graph-view.mjs uses for `#particle-direction-toggle`.
+   * `Math.round()` avoids sub-pixel gaps/overlaps between the header's
+   * measured bottom edge and the drawer/scrim's `top`.
+   */
+  function syncDrawerPosition() {
+    const header = document.querySelector(".graph-header") ?? document.querySelector("nav");
+    if (!header) return;
+    const top = `${Math.round(header.getBoundingClientRect().bottom)}px`;
+    if (panel) panel.style.top = top;
+    if (scrim) scrim.style.top = top;
+  }
+
+  const headerEl = document.querySelector(".graph-header") ?? document.querySelector("nav");
+  if (headerEl && typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(syncDrawerPosition).observe(headerEl);
+  }
+  window.addEventListener("resize", syncDrawerPosition);
+  syncDrawerPosition();
+
+  function openDrawer() {
+    if (!panel) return;
+    syncDrawerPosition();
+    panel.hidden = false;
+    if (scrim) scrim.hidden = false;
+    // Applied on the next frame so the initial (off-screen) state paints
+    // first, letting the `transform`/`opacity` transitions to `.open`
+    // actually animate instead of jumping straight to the open state.
+    requestAnimationFrame(() => {
+      panel.classList.add("open");
+      scrim?.classList.add("open");
+    });
+    closeButton?.focus({ preventScroll: true });
+  }
+
+  function closeDrawer() {
+    if (!panel || panel.hidden) return;
+    panel.classList.remove("open");
+    scrim?.classList.remove("open");
+    const finish = () => {
+      panel.hidden = true;
+      if (scrim) scrim.hidden = true;
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      finish();
+    } else {
+      panel.addEventListener("transitionend", finish, { once: true });
+    }
+    toggleButton?.focus({ preventScroll: true });
+  }
+
+  function isDrawerOpen() {
+    return !!panel && !panel.hidden;
   }
 
   /** Persists `nextLog` directly (bypassing `appendEvent`), for the
@@ -257,6 +322,41 @@ function main() {
     }
   }
 
+  /**
+   * Builds one history-list row's markup: a leading verb icon (Read =
+   * muted eye, Unread = nebula-colored dot, Initial state = accent-dim
+   * star — REQ-UX / history-drawer mock), the verb label, and — for real
+   * events only — the note id (ellipsized via CSS if too long) and a
+   * right-aligned timestamp. Monospace is reserved for the id/timestamp;
+   * everything else uses the default sans font (site.css).
+   */
+  function buildHistoryRow(kind, verbText, subjectText, timeText) {
+    const verbIcon = document.createElement("span");
+    verbIcon.className = `verb-icon is-${kind}`;
+    verbIcon.setAttribute("aria-hidden", "true");
+
+    const verb = document.createElement("span");
+    verb.className = "verb";
+    verb.textContent = verbText;
+
+    const fragment = document.createDocumentFragment();
+    fragment.append(verbIcon, verb);
+
+    if (subjectText !== undefined) {
+      const subject = document.createElement("span");
+      subject.className = "subject";
+      subject.textContent = subjectText;
+      fragment.append(subject);
+    }
+    if (timeText !== undefined) {
+      const time = document.createElement("span");
+      time.className = "time";
+      time.textContent = timeText;
+      fragment.append(time);
+    }
+    return fragment;
+  }
+
   function renderHistoryList() {
     if (!historyList) return;
     historyList.replaceChildren();
@@ -264,7 +364,15 @@ function main() {
       const item = document.createElement("li");
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = `${event.status === "read" ? "Read" : "Unread"} · ${event.id} · ${formatEventTime(event.ts, offsetMinutes)}`;
+      const kind = event.status === "read" ? "read" : "unread";
+      button.append(
+        buildHistoryRow(
+          kind,
+          event.status === "read" ? "Read" : "Unread",
+          event.id,
+          formatEventTime(event.ts, offsetMinutes),
+        ),
+      );
       // Highlight the entry currently being viewed via rewind (REQ-EXPLORE-003),
       // so it's obvious which point in history the page is showing. No entry
       // is highlighted while live (cursorTs === null): "now" isn't any single
@@ -289,7 +397,7 @@ function main() {
     const initialItem = document.createElement("li");
     const initialButton = document.createElement("button");
     initialButton.type = "button";
-    initialButton.textContent = "Initial state (nothing explored yet)";
+    initialButton.append(buildHistoryRow("initial", "Initial state (nothing explored yet)"));
     const isInitialActive = cursorTs === INITIAL_CURSOR_TS;
     initialButton.classList.toggle("active", isInitialActive);
     if (isInitialActive) {
@@ -359,13 +467,30 @@ function main() {
   }
 
   toggleButton?.addEventListener("click", () => {
-    if (!panel) return;
-    panel.hidden = !panel.hidden;
+    if (isDrawerOpen()) {
+      closeDrawer();
+    } else {
+      openDrawer();
+    }
+  });
+
+  closeButton?.addEventListener("click", () => {
+    closeDrawer();
+  });
+
+  scrim?.addEventListener("click", () => {
+    closeDrawer();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && isDrawerOpen()) {
+      closeDrawer();
+    }
   });
 
   returnToNowButton?.addEventListener("click", () => {
     cursorTs = null;
-    if (panel) panel.hidden = true;
+    closeDrawer();
     update();
   });
 
@@ -384,7 +509,7 @@ function main() {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }
     cursorTs = null;
-    if (panel) panel.hidden = true;
+    closeDrawer();
     update();
   });
 
@@ -396,7 +521,7 @@ function main() {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }
     cursorTs = null;
-    if (panel) panel.hidden = true;
+    closeDrawer();
     update();
   });
 
@@ -466,7 +591,8 @@ function main() {
     const loggedIds = new Set(log.map((event) => event.id));
     const missingIds = [...loggedIds].filter((id) => !modifiedAtById.has(id));
     if (missingIds.length > 0 && missingNotice) {
-      missingNotice.textContent = `No longer exist, can no longer be tracked: ${missingIds.join(", ")}`;
+      const textEl = missingNotice.querySelector("[data-text]");
+      if (textEl) textEl.textContent = `No longer exist, can no longer be tracked: ${missingIds.join(", ")}`;
       missingNotice.hidden = false;
     }
 
@@ -484,7 +610,8 @@ function main() {
       }
     }
     if (autoUnreadIds.length > 0 && autoUnreadNotice) {
-      autoUnreadNotice.textContent = `Updated since read, marked unread again: ${autoUnreadIds.join(", ")}`;
+      const textEl = autoUnreadNotice.querySelector("[data-text]");
+      if (textEl) textEl.textContent = `Updated since read, marked unread again: ${autoUnreadIds.join(", ")}`;
       autoUnreadNotice.hidden = false;
     }
 

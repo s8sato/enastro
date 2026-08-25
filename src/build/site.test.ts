@@ -52,7 +52,9 @@ describe("buildSite (fixtures/basic-vault)", () => {
     expect(noteA).toContain('data-copy="note-a"');
     expect(noteA).toContain('<script type="module" src="../assets/copy-id.mjs"></script>');
     // Every note page links back to the index/landing page (REQ-UX-006).
-    expect(noteA).toContain('<nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a></nav>');
+    expect(noteA).toContain(
+      '<nav><a href="../index.html">All notes</a> <a href="../graph.html">Graph view</a><button type="button" id="exploration-rewind-toggle" hidden>HISTORY</button></nav>',
+    );
     // Every note page shows its last-modified ("Updated") timestamp,
     // formatted in UTC as a deterministic no-JS fallback (REQ-UX-007,
     // REQ-BUILD-001), with the raw epoch ms also present so
