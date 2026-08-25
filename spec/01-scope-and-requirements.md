@@ -162,6 +162,7 @@ minimal Markdown vault
 | REQ-EXPLORE-006 | 探索ステータスはいかなるビルド成果物（`graph.json`, `search-index.json`, 生成 HTML）にも一切書き込まれない **MUST**（[08-security-and-privacy.md](08-security-and-privacy.md) の privacy invariant と整合）。 | DECIDED |
 | REQ-EXPLORE-007 | サイト読み込み時、探索ログに登場するノート ID が現在の公開ノート一覧（`search-index.json`）に存在しない場合、閲覧者に通知する **SHOULD**。また、既読状態のノートについて、その既読イベントの記録時刻より当該ノートの最終更新日時（`search-index.json` の `modifiedAt`。その情報源は REQ-UX-007、[ADR-0015](../decisions/ADR-0015-note-modified-at-source.md)）が新しい場合、自動的に未読イベントを追記し、その旨を通知する **SHOULD**。この2つの通知は原因が異なるため独立した別々の枠に表示し、件数ではなく対象ノート ID を列挙する **SHOULD**。いずれもフェッチ失敗時（オフライン等）は同期機能のみを黙ってスキップし、他の探索ステータス機能に影響しない **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂）。 | DECIDED |
 | REQ-EXPLORE-008 | 閲覧者は rewind 中のカーソル位置を対象に、次の2つの明示的・破壊的操作を実行できる **MAY**: (a) "Reset to here" — カーソル時点以前（`ts <= T`）の履歴は保持したまま、カーソル時点より後（`ts > T`）の履歴を永続的に削除する（`git reset --hard` 相当。履歴の集約・書き換えは行わない）。(b) "Squash until here" — カーソル時点までの範囲の履歴（イベントログ）すべてを、正味の効果を保持したまま永続化された Snapshot に畳み込み、個々のイベントをログから削除する。いずれも実行前に確認を要求し、rewind 自体（閲覧専用、REQ-EXPLORE-003）とは明確に区別される **MUST**。Snapshot は更新時刻（`snapshotUpdatedAt`）を持ち、History リスト上の Snapshot 行に他のイベント行と同じ書式で表示される **MUST**。初期値はローカルストレージ初期化時（有効な状態が見つからず新規状態を組み立てた時点）に確定・即時永続化され、"Squash until here" 実行時にその実行時刻へ更新される **MUST**。"Reset to here" はこの値を変更しない **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂）。 | DECIDED |
+| REQ-EXPLORE-009 | rewind 中のカーソル位置は必ず「now」「Snapshot」「過去のイベント時点」のいずれかであり、未定義状態を取らない **MUST**。初期状態・"Return to now"・"Reset to here" 実行後のカーソル位置は now、"Squash until here" 実行後のカーソル位置は Snapshot になる **MUST**。カーソル位置および History ドロワーの開閉状態はページ遷移・リロードをまたいで `localStorage` に永続化される **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂、擬似 SPA 化）。ボタンの活性条件は次のとおり再定義される **MUST**: カーソル位置が now のとき "Return to now" と "Reset to here" は非活性、カーソル位置が Snapshot のとき "Squash until here" は非活性（それ以外は活性）。 | DECIDED |
 
 ## 5. Traceability 表
 
@@ -214,6 +215,7 @@ minimal Markdown vault
 | 02: 公開 artifact への非漏洩 | REQ-EXPLORE-006, REQ-SEC-001 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 02: ID不一致通知・自動unread同期 | REQ-EXPLORE-007 | ADR-0014, ADR-0015 | 09 §2.6 | fixtures/basic-vault |
 | 02: Reset to here / Squash until here | REQ-EXPLORE-008 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
+| 02: カーソル位置永続化・ボタン活性条件再定義 | REQ-EXPLORE-009 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 03: 12色テーマ切り替え | REQ-UX-011 | (render/client 実装、ADR-0014 の localStorage 完結パターンを踏襲) | 09 §2.6 | fixtures/basic-vault |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は

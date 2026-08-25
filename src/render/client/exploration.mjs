@@ -20,10 +20,16 @@
  * longer present are simply never looked up by the index/graph pages, and
  * new ids default to "unread".
  *
- * The rewind cursor itself is *not* persisted across page loads — it is
- * plain in-memory UI state, reset to "now" (live) on every navigation/
- * reload, since it is only meant for momentarily reviewing history within
- * the current session.
+ * The rewind cursor position and the History drawer's open/closed state
+ * *are* persisted across page loads (ADR-0014, "カーソル位置のブラウザ永続化" —
+ * this supersedes that ADR's earlier "非永続" decision), under their own
+ * `localStorage` keys (`CURSOR_STORAGE_KEY`/`DRAWER_STORAGE_KEY`), separate
+ * from `STORAGE_KEY` since they are UI/view state, not exploration history
+ * data — a failed write to either does NOT trigger the storage-full
+ * warning banner (REQ-EXPLORE-002), unlike a failed write to `STORAGE_KEY`.
+ * The cursor is always exactly one of three states: "now" (live, the
+ * default), the Snapshot, or a specific past event timestamp — see
+ * `loadCursor()`/`saveCursor()`.
  *
  * Two operations *do* permanently rewrite persisted state, as an explicit,
  * user-confirmed exception to the above (ADR-0014, "Reset to here" /
@@ -52,6 +58,19 @@ export const STORAGE_KEY = "enastro:exploration:v2";
 
 /** Legacy (pre-Snapshot) storage key: a bare event-log array, no Snapshot. */
 const LEGACY_STORAGE_KEY = "enastro:exploration:v1";
+
+/**
+ * `localStorage` key for the persisted rewind cursor position (ADR-0014,
+ * "カーソル位置のブラウザ永続化"). Kept separate from `STORAGE_KEY` since this
+ * is view-only UI state, not exploration history data.
+ */
+export const CURSOR_STORAGE_KEY = "enastro:exploration:cursor:v1";
+
+/**
+ * `localStorage` key for the persisted History drawer open/closed state
+ * (ADR-0014, "カーソル位置のブラウザ永続化").
+ */
+export const DRAWER_STORAGE_KEY = "enastro:exploration:drawer:v1";
 
 /**
  * Sentinel cursor value representing "the Snapshot" — the persisted base
@@ -238,6 +257,79 @@ export function squashStateUntil(state, cursorTs) {
 }
 
 /**
+ * Reads the persisted rewind cursor position (ADR-0014, "カーソル位置の
+ * ブラウザ永続化"). The cursor is always exactly one of three states —
+ * "now" (live, `null`), the Snapshot (`SNAPSHOT_CURSOR_TS`), or a specific
+ * past event timestamp — tagged as `{mode: "now"} | {mode: "snapshot"} |
+ * {mode: "past", ts: number}` in storage, since plain `JSON.stringify`
+ * can't round-trip `SNAPSHOT_CURSOR_TS` (`-Infinity` serializes to `null`).
+ * Falls back to `null` ("now") on any absent/corrupt data.
+ * @returns {number | null}
+ */
+export function loadCursor() {
+  try {
+    const raw = localStorage.getItem(CURSOR_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.mode === "snapshot") return SNAPSHOT_CURSOR_TS;
+    if (parsed && parsed.mode === "past" && typeof parsed.ts === "number") return parsed.ts;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persists the rewind cursor position. See `loadCursor()` for the storage
+ * shape. A failed write (e.g. `QuotaExceededError`) is swallowed — unlike
+ * `saveState()`, callers must NOT surface the storage-full warning banner
+ * for this, since this is UI/view state, not exploration history data
+ * (REQ-EXPLORE-002 only applies to the latter).
+ * @param {number | null} cursorTs
+ * @returns {boolean} whether the write succeeded.
+ */
+export function saveCursor(cursorTs) {
+  const payload =
+    cursorTs === null ? { mode: "now" } : cursorTs === SNAPSHOT_CURSOR_TS ? { mode: "snapshot" } : { mode: "past", ts: cursorTs };
+  try {
+    localStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify(payload));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reads the persisted History drawer open/closed state (ADR-0014,
+ * "カーソル位置のブラウザ永続化"). Falls back to `false` (closed) on any
+ * absent/corrupt data.
+ * @returns {boolean}
+ */
+export function loadDrawerOpen() {
+  try {
+    return localStorage.getItem(DRAWER_STORAGE_KEY) === "open";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Persists the History drawer open/closed state. See `loadCursor()`'s doc
+ * comment for why write failures here are swallowed rather than surfaced
+ * as a storage-full warning.
+ * @param {boolean} open
+ * @returns {boolean} whether the write succeeded.
+ */
+export function saveDrawerOpen(open) {
+  try {
+    localStorage.setItem(DRAWER_STORAGE_KEY, open ? "open" : "closed");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Parses a `search-index.json` entry's `modifiedAt` string (e.g.
  * "2026-08-24 18:24 UTC", see `SearchIndexEntry`) back into epoch
  * milliseconds, for comparison against read-event timestamps
@@ -280,9 +372,11 @@ function formatEventTime(ts, offsetMinutes) {
 
 function main() {
   let state = loadState();
-  // `null` means "live" (cursor = now); any other value is an explicit
-  // past timestamp the user rewound to (REQ-EXPLORE-003).
-  let cursorTs = null;
+  // `null` means "live" (cursor = now); `SNAPSHOT_CURSOR_TS` means the
+  // Snapshot; any other value is an explicit past event timestamp the user
+  // rewound to (REQ-EXPLORE-003). Restored from `localStorage` so it
+  // survives page navigation/reload (REQ-EXPLORE-009, ADR-0014).
+  let cursorTs = loadCursor();
   const offsetMinutes = -new Date().getTimezoneOffset();
 
   const bar = document.getElementById("exploration-bar");
@@ -347,23 +441,33 @@ function main() {
   window.addEventListener("resize", syncDrawerPosition);
   syncDrawerPosition();
 
-  function openDrawer() {
+  function openDrawer(animate = true) {
     if (!panel) return;
     syncDrawerPosition();
     panel.hidden = false;
     if (scrim) scrim.hidden = false;
-    // Applied on the next frame so the initial (off-screen) state paints
-    // first, letting the `transform`/`opacity` transitions to `.open`
-    // actually animate instead of jumping straight to the open state.
-    requestAnimationFrame(() => {
+    saveDrawerOpen(true);
+    if (animate) {
+      // Applied on the next frame so the initial (off-screen) state paints
+      // first, letting the `transform`/`opacity` transitions to `.open`
+      // actually animate instead of jumping straight to the open state.
+      requestAnimationFrame(() => {
+        panel.classList.add("open");
+        scrim?.classList.add("open");
+      });
+      closeButton?.focus({ preventScroll: true });
+    } else {
+      // Restoring a persisted "open" state on page load: skip the
+      // slide-in transition entirely so it doesn't replay on every
+      // navigation (ADR-0014, "カーソル位置のブラウザ永続化").
       panel.classList.add("open");
       scrim?.classList.add("open");
-    });
-    closeButton?.focus({ preventScroll: true });
+    }
   }
 
   function closeDrawer() {
     if (!panel || panel.hidden) return;
+    saveDrawerOpen(false);
     panel.classList.remove("open");
     scrim?.classList.remove("open");
     const finish = () => {
@@ -451,6 +555,7 @@ function main() {
       }
       button.addEventListener("click", () => {
         cursorTs = event.ts;
+        saveCursor(cursorTs);
         update();
       });
       item.appendChild(button);
@@ -474,6 +579,7 @@ function main() {
     }
     snapshotButton.addEventListener("click", () => {
       cursorTs = SNAPSHOT_CURSOR_TS;
+      saveCursor(cursorTs);
       update();
     });
     snapshotItem.appendChild(snapshotButton);
@@ -522,15 +628,20 @@ function main() {
     const statusById = computeStatusAsOf(state, currentCursor());
     applyToNoteList(statusById);
     applyToMarkReadButton(statusById);
-    // Return is always enabled (returning to "now" is safe/idempotent even
-    // while already live); Squash/Reset require an actual rewound cursor to
-    // act on, so they stay disabled (rather than hidden) until one is
-    // selected.
+    // Button enablement (REQ-EXPLORE-009, ADR-0014): Return/Reset act on an
+    // actual rewound cursor, so they're disabled while already at "now".
+    // Squash folds everything up to the cursor into the Snapshot, so it's
+    // only meaningless (and disabled) once the cursor already *is* the
+    // Snapshot — it stays enabled at "now" (folding the whole log) and at
+    // any past event.
+    if (returnToNowButton) {
+      returnToNowButton.disabled = cursorTs === null;
+    }
     if (resetHereButton) {
       resetHereButton.disabled = cursorTs === null;
     }
     if (squashHereButton) {
-      squashHereButton.disabled = cursorTs === null;
+      squashHereButton.disabled = cursorTs === SNAPSHOT_CURSOR_TS;
     }
     renderHistoryList();
     dispatchChanged(statusById, currentCursor());
@@ -559,7 +670,9 @@ function main() {
   });
 
   returnToNowButton?.addEventListener("click", () => {
+    if (cursorTs === null) return;
     cursorTs = null;
+    saveCursor(cursorTs);
     update();
   });
 
@@ -581,12 +694,15 @@ function main() {
     if (!persistState(state)) {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }
+    // "Reset to here" lands the cursor on the new "now" (REQ-EXPLORE-009):
+    // the rewound-to state has just become the live state.
     cursorTs = null;
+    saveCursor(cursorTs);
     update();
   });
 
   squashHereButton?.addEventListener("click", () => {
-    if (cursorTs === null) return;
+    if (cursorTs === SNAPSHOT_CURSOR_TS) return;
     if (
       !confirm(
         "This folds all read/unread history up to this point into the Snapshot, permanently " +
@@ -595,11 +711,18 @@ function main() {
     ) {
       return;
     }
-    state = squashStateUntil(state, cursorTs);
+    // Folds up to the current cursor — including "now" (`currentCursor()`
+    // resolves `null` to `Infinity`), which is now a valid target since
+    // Squash is enabled while live (REQ-EXPLORE-009).
+    state = squashStateUntil(state, currentCursor());
     if (!persistState(state)) {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }
-    cursorTs = null;
+    // "Squash until here" folds everything up to the cursor into the
+    // Snapshot, so the cursor now lands on that new Snapshot rather than
+    // returning to "now" (REQ-EXPLORE-009, ADR-0014 amendment).
+    cursorTs = SNAPSHOT_CURSOR_TS;
+    saveCursor(cursorTs);
     update();
   });
 
@@ -696,6 +819,13 @@ function main() {
     if (autoUnreadIds.length > 0) {
       update();
     }
+  }
+
+  // Restore a persisted "open" drawer state without the slide-in
+  // transition (REQ-EXPLORE-009, ADR-0014 amendment) — only user-initiated
+  // opens (toggle button) animate.
+  if (loadDrawerOpen()) {
+    openDrawer(false);
   }
 
   update();

@@ -5,11 +5,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Browser, type Page, chromium } from "playwright";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildSite } from "../build/site.js";
 import { serveStatic } from "./static-server.js";
 
 const vaultDir = path.resolve(fileURLToPath(import.meta.url), "../../../fixtures/basic-vault");
+
+/** Persisted rewind-cursor/drawer-open state keys (REQ-EXPLORE-009, ADR-0014). */
+const CURSOR_STORAGE_KEY = "enastro:exploration:cursor:v1";
+const DRAWER_STORAGE_KEY = "enastro:exploration:drawer:v1";
 
 let outDir: string;
 let server: Server;
@@ -33,6 +37,29 @@ afterAll(async () => {
   if (outDir) {
     rmSync(outDir, { recursive: true, force: true });
   }
+});
+
+// Each test's own history-drawer/cursor expectations assume a fresh "now"/
+// closed-drawer starting point, but both are now persisted across page
+// navigation (REQ-EXPLORE-009) and the shared `page` carries `localStorage`
+// across every test in this file — so without this, a test that leaves the
+// drawer open or the cursor rewound would silently change the next test's
+// starting state (e.g. clicking the toggle button would *close* an
+// already-restored-open drawer instead of opening it). `about:blank` (the
+// very first test, before any `page.goto`) has no accessible `localStorage`,
+// hence the try/catch.
+beforeEach(async () => {
+  await page?.evaluate(
+    ({ cursorKey, drawerKey }) => {
+      try {
+        localStorage.removeItem(cursorKey);
+        localStorage.removeItem(drawerKey);
+      } catch {
+        // about:blank or similar — nothing to clear.
+      }
+    },
+    { cursorKey: CURSOR_STORAGE_KEY, drawerKey: DRAWER_STORAGE_KEY },
+  );
 });
 
 describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
@@ -78,16 +105,21 @@ describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
     const historyEntries = page.locator("#exploration-history-list button");
     await expect.poll(() => historyEntries.count()).toBeGreaterThan(0);
 
+    const returnToNow = page.locator("#exploration-return-to-now");
+    // At "now" (no persisted cursor yet), Return is disabled — there's
+    // nothing to return from (REQ-EXPLORE-009).
+    await expect.poll(() => returnToNow.isDisabled()).toBe(true);
+
     // Note is currently "read" (from the previous test's persisted
     // localStorage); rewinding to its own history entry re-derives that
     // same state, but puts the UI into read-only "viewing the past" mode.
     await historyEntries.first().click();
     expect(await markReadButton.isDisabled()).toBe(true);
+    expect(await returnToNow.isDisabled()).toBe(false);
 
-    const returnToNow = page.locator("#exploration-return-to-now");
-    await expect.poll(() => returnToNow.isVisible()).toBe(true);
     await returnToNow.click();
     expect(await markReadButton.isDisabled()).toBe(false);
+    expect(await returnToNow.isDisabled()).toBe(true);
   });
 
   it("shows a dismissible warning instead of losing data when localStorage is full (REQ-EXPLORE-002)", async () => {
@@ -396,6 +428,16 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     const markReadButton = page.locator("[data-mark-read]");
     expect(await markReadButton.textContent()).toBe("Mark as read");
+
+    // "Reset to here" lands the cursor on the new "now" (REQ-EXPLORE-009):
+    // Return/Reset are disabled again, and no history entry is highlighted.
+    const returnToNow = page.locator("#exploration-return-to-now");
+    const resetHere = page.locator("#exploration-reset-here");
+    expect(await returnToNow.isDisabled()).toBe(true);
+    expect(await resetHere.isDisabled()).toBe(true);
+    for (const entry of await historyEntries.all()) {
+      expect((await entry.getAttribute("class")) ?? "").not.toContain("active");
+    }
   });
 
   it("supports Squash until here, folding read/unread history into the Snapshot (REQ-EXPLORE-008)", async () => {
@@ -456,8 +498,123 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     expect(afterSquashText).toMatch(/Snapshot/);
     expect(afterSquashText).not.toBe(beforeSquashText);
 
+    // "Squash until here" lands the cursor on the new Snapshot
+    // (REQ-EXPLORE-009): its row is highlighted, and Squash (now a no-op —
+    // nothing precedes the Snapshot) is disabled, while Return/Reset (which
+    // act relative to a non-"now" cursor) are enabled.
+    await expect.poll(() => historyEntries.last().getAttribute("class")).toContain("active");
+    expect(await historyEntries.last().getAttribute("aria-current")).toBe("true");
+    const squashHere = page.locator("#exploration-squash-here");
+    const returnToNow = page.locator("#exploration-return-to-now");
+    const resetHere = page.locator("#exploration-reset-here");
+    expect(await squashHere.isDisabled()).toBe(true);
+    expect(await returnToNow.isDisabled()).toBe(false);
+    expect(await resetHere.isDisabled()).toBe(false);
+
     // Net effect is unchanged after the squash: note-a still reads unread.
     const markReadButton = page.locator("[data-mark-read]");
     expect(await markReadButton.textContent()).toBe("Mark as read");
+  });
+
+  it("supports Squash until here while live ('now'), folding the entire log into the Snapshot (REQ-EXPLORE-009)", async () => {
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.evaluate(
+      ({ key }) => {
+        const base = Date.now() - 60_000;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            snapshot: {},
+            log: [
+              { id: "note-a", status: "read", ts: base + 100 },
+              { id: "note-b", status: "read", ts: base + 200 },
+            ],
+            snapshotUpdatedAt: base,
+          }),
+        );
+      },
+      { key: STORAGE_KEY },
+    );
+    // Cursor stays at "now" (no persisted cursor key from this seed):
+    await page.evaluate((key) => localStorage.removeItem(key), CURSOR_STORAGE_KEY);
+    await page.reload();
+
+    await page.click("#exploration-rewind-toggle");
+    const squashHere = page.locator("#exploration-squash-here");
+    // Squash is enabled at "now" — it's only disabled once the cursor
+    // already *is* the Snapshot (REQ-EXPLORE-009).
+    expect(await squashHere.isDisabled()).toBe(false);
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await squashHere.click();
+
+    const historyEntries = page.locator("#exploration-history-list button");
+    // Both events folded into the Snapshot, leaving only the Snapshot row:
+    await expect.poll(() => historyEntries.count()).toBe(1);
+    const stored = JSON.parse(
+      (await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)) ?? '{"snapshot":{},"log":[]}',
+    );
+    expect(stored.log).toEqual([]);
+    expect(stored.snapshot).toEqual({ "note-a": "read", "note-b": "read" });
+    expect(await squashHere.isDisabled()).toBe(true);
+  });
+
+  it("persists the rewind cursor across page navigation, restoring the same highlighted history entry (REQ-EXPLORE-009)", async () => {
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.evaluate(
+      ({ key }) => {
+        const base = Date.now() - 60_000;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            snapshot: {},
+            log: [{ id: "note-a", status: "read", ts: base + 100 }],
+            snapshotUpdatedAt: base,
+          }),
+        );
+      },
+      { key: STORAGE_KEY },
+    );
+    await page.reload();
+
+    await page.click("#exploration-rewind-toggle");
+    const historyEntries = page.locator("#exploration-history-list button");
+    await expect.poll(() => historyEntries.count()).toBeGreaterThan(0);
+    await historyEntries.first().click();
+    await expect.poll(() => historyEntries.first().getAttribute("class")).toContain("active");
+
+    // Navigate away to a different page and back — the cursor stays
+    // rewound rather than resetting to "now" (REQ-EXPLORE-009, ADR-0014).
+    // The History drawer's own open state is also persisted (it was opened
+    // above), so it's already showing again — no need to click the toggle,
+    // which would otherwise *close* an already-restored-open drawer.
+    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    const historyEntriesAfterNav = page.locator("#exploration-history-list button");
+    await expect.poll(() => historyEntriesAfterNav.count()).toBeGreaterThan(0);
+    await expect.poll(() => historyEntriesAfterNav.first().getAttribute("class")).toContain("active");
+    const markReadButton = page.locator("[data-mark-read]");
+    expect(await markReadButton.isDisabled()).toBe(true); // still read-only (rewound)
+
+    await page.click("#exploration-return-to-now");
+  });
+
+  it("persists the History drawer's open/closed state across page navigation (REQ-EXPLORE-009)", async () => {
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.evaluate((key) => localStorage.setItem(key, "closed"), DRAWER_STORAGE_KEY);
+    await page.reload();
+    const panel = page.locator("#exploration-rewind-panel");
+    await expect.poll(() => panel.isVisible()).toBe(false);
+
+    await page.click("#exploration-rewind-toggle");
+    await expect.poll(() => panel.isVisible()).toBe(true);
+
+    await page.goto(`${baseUrl}/index.html`);
+    await expect.poll(() => page.locator("#exploration-rewind-panel").isVisible()).toBe(true);
+
+    await page.click("#exploration-rewind-toggle");
+    await expect.poll(() => page.locator("#exploration-rewind-panel").isVisible()).toBe(false);
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await expect.poll(() => page.locator("#exploration-rewind-panel").isVisible()).toBe(false);
   });
 });

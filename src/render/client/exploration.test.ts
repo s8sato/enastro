@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  CURSOR_STORAGE_KEY,
+  DRAWER_STORAGE_KEY,
   SNAPSHOT_CURSOR_TS,
   STORAGE_KEY,
   appendEvent,
   computeStatusAsOf,
   getLastEventTimestamp,
+  loadCursor,
+  loadDrawerOpen,
   loadState,
   parseModifiedAt,
   resetLogAt,
+  saveCursor,
+  saveDrawerOpen,
   squashStateUntil,
 } from "./exploration.mjs";
 
@@ -337,5 +343,68 @@ describe("parseModifiedAt (search-index.json sync, REQ-EXPLORE-006/007)", () => 
     // search-index.json entries omit `modifiedAt` entirely for notes with
     // no git history, rather than serializing a stray `null`/placeholder.
     expect(parseModifiedAt(undefined)).toBeUndefined();
+  });
+});
+
+describe("loadCursor/saveCursor (cursor persistence, REQ-EXPLORE-009, ADR-0014)", () => {
+  it("defaults to null ('now') when nothing has been stored yet", () => {
+    expect(loadCursor()).toBeNull();
+  });
+
+  it("round-trips the 'now' cursor (null)", () => {
+    saveCursor(null);
+    expect(loadCursor()).toBeNull();
+  });
+
+  it("round-trips the Snapshot cursor (SNAPSHOT_CURSOR_TS)", () => {
+    saveCursor(SNAPSHOT_CURSOR_TS);
+    expect(loadCursor()).toBe(SNAPSHOT_CURSOR_TS);
+  });
+
+  it("round-trips a specific past event timestamp", () => {
+    saveCursor(1234567);
+    expect(loadCursor()).toBe(1234567);
+  });
+
+  it("returns null rather than throwing when the stored value is corrupt JSON", () => {
+    localStorage.setItem(CURSOR_STORAGE_KEY, "{not valid json");
+    expect(loadCursor()).toBeNull();
+  });
+
+  it("returns null rather than throwing when the stored value has an unrecognized mode", () => {
+    localStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ mode: "bogus" }));
+    expect(loadCursor()).toBeNull();
+  });
+
+  it("returns false from saveCursor (without throwing) when localStorage.setItem fails", () => {
+    (localStorage as unknown as { simulateQuotaExceeded(): void }).simulateQuotaExceeded();
+    expect(saveCursor(42)).toBe(false);
+  });
+});
+
+describe("loadDrawerOpen/saveDrawerOpen (History drawer persistence, REQ-EXPLORE-009, ADR-0014)", () => {
+  it("defaults to false (closed) when nothing has been stored yet", () => {
+    expect(loadDrawerOpen()).toBe(false);
+  });
+
+  it("round-trips true (open)", () => {
+    saveDrawerOpen(true);
+    expect(loadDrawerOpen()).toBe(true);
+  });
+
+  it("round-trips false (closed)", () => {
+    saveDrawerOpen(true);
+    saveDrawerOpen(false);
+    expect(loadDrawerOpen()).toBe(false);
+  });
+
+  it("returns false rather than throwing when the stored value is unrecognized", () => {
+    localStorage.setItem(DRAWER_STORAGE_KEY, "garbage");
+    expect(loadDrawerOpen()).toBe(false);
+  });
+
+  it("returns false from saveDrawerOpen (without throwing) when localStorage.setItem fails", () => {
+    (localStorage as unknown as { simulateQuotaExceeded(): void }).simulateQuotaExceeded();
+    expect(saveDrawerOpen(true)).toBe(false);
   });
 });

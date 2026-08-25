@@ -12,6 +12,10 @@ export interface ExplorationState {
 
 export const STORAGE_KEY: string;
 
+export const CURSOR_STORAGE_KEY: string;
+
+export const DRAWER_STORAGE_KEY: string;
+
 export const SNAPSHOT_CURSOR_TS: number;
 
 export function loadState(): ExplorationState;
@@ -38,6 +42,14 @@ export function getLastEventTimestamp(
 export function resetLogAt(log: ExplorationEvent[], cursorTs: number): ExplorationEvent[];
 
 export function squashStateUntil(state: ExplorationState, cursorTs: number): ExplorationState;
+
+export function loadCursor(): number | null;
+
+export function saveCursor(cursorTs: number | null): boolean;
+
+export function loadDrawerOpen(): boolean;
+
+export function saveDrawerOpen(open: boolean): boolean;
 
 export function parseModifiedAt(formatted: unknown): number | undefined;
 
