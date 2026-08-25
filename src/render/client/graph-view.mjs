@@ -287,28 +287,25 @@ async function main() {
   // above) and re-applies exploration dimming — no rebuild of the pixi
   // scene, no change to the underlying graph IR.
   const particleDirectionToggle = document.getElementById("particle-direction-toggle");
-  const themeSwitcherForStacking = document.getElementById("theme-switcher");
   if (particleDirectionToggle) {
+    // Both labels are padded (with `padEnd`) to the same character length
+    // as the longer one, using ordinary trailing spaces — since this
+    // button is set to `--font-mono` + `white-space: pre` (site.css), each
+    // character (including a space) occupies an identical column width, so
+    // the button's rendered width no longer shifts when the label toggles.
+    const FLOW_LABELS = ["Flow: reverse of wikilink", "Flow: as wikilink"];
+    const FLOW_LABEL_WIDTH = Math.max(...FLOW_LABELS.map((label) => label.length));
     function updateParticleDirectionToggleLabel() {
       const isDependencyFirst = particleDirection === "dependency-first";
-      particleDirectionToggle.textContent = isDependencyFirst ? "Flow: reverse of wikilink" : "Flow: as wikilink";
+      const label = isDependencyFirst ? FLOW_LABELS[0] : FLOW_LABELS[1];
+      particleDirectionToggle.textContent = label.padEnd(FLOW_LABEL_WIDTH, " ");
       particleDirectionToggle.setAttribute("aria-pressed", String(isDependencyFirst));
     }
-    // Stacked directly above the Theme button (bottom-left corner): measured
-    // from `#theme-switcher`'s live position rather than a hardcoded rem
-    // guess, since the trigger's actual rendered height depends on font
-    // metrics that are easy to get subtly wrong by hand (see site.css's
-    // comment on #particle-direction-toggle for the history here).
-    const STACK_GAP_PX = 8;
-    function positionParticleDirectionToggle() {
-      if (!themeSwitcherForStacking) return;
-      const rect = themeSwitcherForStacking.getBoundingClientRect();
-      particleDirectionToggle.style.bottom = `${window.innerHeight - rect.top + STACK_GAP_PX}px`;
-    }
+    // Fixed to the bottom-right corner (site.css) — no runtime positioning
+    // needed here, unlike the earlier layout that stacked this above the
+    // Theme button.
     updateParticleDirectionToggleLabel();
-    positionParticleDirectionToggle();
     particleDirectionToggle.hidden = false;
-    window.addEventListener("resize", positionParticleDirectionToggle);
     particleDirectionToggle.addEventListener("click", () => {
       particleDirection = particleDirection === "dependency-first" ? "wikilink" : "dependency-first";
       storeDirection(particleDirection);

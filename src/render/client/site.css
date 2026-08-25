@@ -1198,23 +1198,22 @@ span.broken-link {
   display: none;
 }
 
-/* Particle direction toggle (REQ-UX-012): a small floating widget, stacked
-   directly above `#theme-trigger` in the bottom-left corner (same `left`
-   offset as `.theme-switcher`). Its `bottom` is NOT a fixed guess here —
-   two earlier attempts at hardcoding a rem offset both rendered in the
-   wrong vertical order, since the exact rendered height of `#theme-trigger`
-   depends on font metrics that are easy to get subtly wrong by hand.
-   `graph-view.mjs` instead measures `#theme-switcher`'s live
-   `getBoundingClientRect()` at runtime and sets `bottom` in JS (recomputed
-   on resize), so it's always correct regardless of the button's actual
-   rendered size. The header's height is NOT a usable reference point
-   either — `#tag-filters` wraps to a variable number of rows depending on
-   how many tags exist, so a fixed `top` offset risked the toggle drifting
-   under/over the tag pills. The bottom-left corner has no such variable
-   content. */
+/* Particle direction toggle (REQ-UX-012): a small floating widget fixed to
+   the bottom-right corner — the mirror image of `.theme-switcher`'s
+   bottom-left placement — so it no longer needs to be JS-stacked above
+   `#theme-trigger` (an earlier layout that required measuring
+   `#theme-switcher`'s live `getBoundingClientRect()` at runtime just to
+   avoid overlapping it; see graph-view.mjs's git history for that).
+   `white-space: pre` is required for its width to stay constant across its
+   two labels: graph-view.mjs pads the shorter label with trailing spaces
+   to match the longer one's character count (relying on `--font-mono`
+   giving every character, including a space, the same column width) —
+   without `pre`, normal HTML whitespace collapsing would discard that
+   padding and the button would shrink back down anyway. */
 #particle-direction-toggle {
   position: fixed;
-  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
   z-index: 20;
   padding: 0.4rem 0.8rem;
   background: rgba(13, 15, 38, 0.9);
@@ -1224,6 +1223,7 @@ span.broken-link {
   color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: 0.8rem;
+  white-space: pre;
   cursor: pointer;
 }
 
