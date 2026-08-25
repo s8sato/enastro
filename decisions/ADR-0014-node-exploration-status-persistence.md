@@ -419,3 +419,51 @@ Squash の非活性条件の変更に伴い、カーソルが now（ライブ）
 することで解消する。graph ページの `#tag-filters` は、ドロワーの位置基準からは意図的に除外
 されたままとなる（見た目上ドロワーが `#tag-filters` の直下ではなく `<nav>` の直下から始まる
 形になるが、All Notes ページとの一貫性を優先する）。
+
+## Amendment (2026-08-25): `getStatusSnapshot()` の既定カーソルを永続化された値に修正（DECIDED）
+
+上記「カーソル位置のブラウザ永続化」改訂により、rewind カーソルがページ遷移をまたいで
+`localStorage` に永続化されるようになった一方、`getStatusSnapshot()`
+（`src/render/client/exploration.mjs`、`graph-view.mjs` が探索ステータスの初期描画に使用）
+の既定カーソルは引き続き無条件に "now"（`Infinity`）のままだったため、次のリグレッションが
+発生していた（**修正**）。
+
+### 不具合: All Notes/note ページで rewind した状態のまま Graph view へ遷移すると、初期描画だけ誤って "now" を表示する
+
+`renderExplorationBar()` が挿入する `<script type="module" src="assets/exploration.mjs">`
+は、各ページ内で `graph-view.mjs` の `<script>` タグより前に配置されている。ES module
+script はドキュメント順に（`defer` 相当で）実行されるため、`exploration.mjs` の `main()` は
+`graph-view.mjs` が `window.addEventListener("enastro:exploration-changed", ...)` を登録
+するより前に、同期的に一度だけ補正イベントを発火してしまう。`graph-view.mjs` はこの1回きりの
+イベントを取りこぼし、その後は自前の初期値
+（`getStatusSnapshot()` を引数なしで呼び出し、常に `cursorTs = Infinity` で fold していた）
+に依存し続けるため、rewind 中（cursorTs が now 以外）に Graph view へ遷移すると、ノードの
+既読/未読表示がライブの状態を示してしまい、実際に閲覧しているはずの過去時点/Snapshot の状態
+とは食い違う。ユーザーが「法則性が不明」と報告した現象はこれに一致する——rewind していない
+限り発現しないため、再現条件が一見ランダムに見えていた。
+
+### 修正: `getStatusSnapshot()` の既定カーソルを永続化されたカーソルに変更
+
+```js
+export function getStatusSnapshot(cursorTs) {
+  const resolvedCursorTs = cursorTs ?? loadCursor() ?? Infinity;
+  return computeStatusAsOf(loadState(), resolvedCursorTs);
+}
+```
+
+明示的に `cursorTs` を渡した場合はそれを優先し、渡さなかった場合は `loadCursor()`（"now" な
+ら `null`、それ以外は具体的な `ts` または `SNAPSHOT_CURSOR_TS`）で解決する。`null ?? Infinity`
+により "now" は引き続き `Infinity` に解決されるため、後方互換性は保たれる。これにより
+`graph-view.mjs` 側のコード変更は一切不要——初期描画時点から `exploration.mjs` の `main()`
+と同じ状態を見るようになり、スクリプト実行順や取りこぼしたイベントに依存しなくなる。
+
+検討した代替案:
+
+- `graph-view.mjs` 側で明示的に `loadCursor()` を呼んで `getStatusSnapshot(...)` に渡す:
+  `getStatusSnapshot()` を呼び出すあらゆる将来のクライアントコードが同じ罠にはまりうるため、
+  呼び出し側ではなく `getStatusSnapshot()` 自体の既定動作を直す方が根本的かつ再発防止に
+  なると判断した。
+- `exploration.mjs` の `<script>` タグを `graph-view.mjs` より後に配置する: スクリプト実行
+  順への依存を別の順序に付け替えるだけで、根本原因（`getStatusSnapshot()` が "now" 固定）は
+  解消しないため不採用。
+

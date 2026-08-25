@@ -732,4 +732,45 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     expect(graphPanelTop).toBe(notePanelTop);
   });
+
+  it("reflects a persisted rewound cursor on the graph page's initial load, not the live status (regression: getStatusSnapshot must resolve the persisted cursor, REQ-EXPLORE-009)", async () => {
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+    const base = Date.now() - 60_000;
+    await page.evaluate(
+      ({ key, base }) => {
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            snapshot: {},
+            log: [{ id: "note-a", status: "read", ts: base + 100 }],
+            snapshotUpdatedAt: base,
+          }),
+        );
+      },
+      { key: STORAGE_KEY, base },
+    );
+    await page.reload();
+
+    await page.click("#exploration-rewind-toggle");
+    const historyEntries = page.locator("#exploration-history-list button");
+    // 1 real event + the synthetic Snapshot entry:
+    await expect.poll(() => historyEntries.count()).toBe(2);
+    // Rewind to the Snapshot — i.e. before the "read" event was ever
+    // recorded — so the persisted cursor's status ("unread") differs from
+    // the live status ("read").
+    await historyEntries.last().click();
+    await expect.poll(() => historyEntries.last().getAttribute("class")).toContain("active");
+
+    await page.goto(`${baseUrl}/graph.html`);
+    await expect
+      .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
+      .toBe("true");
+    // The graph page's *initial* render must already reflect the
+    // persisted (rewound-to-Snapshot) status — "unread" — not the live
+    // "read" status, even though the graph page never itself clicked
+    // rewind.
+    expect(
+      await page.evaluate(() => (globalThis as any).window.__enastroGraph.isExplored("note-a")),
+    ).toBe(false);
+  });
 });

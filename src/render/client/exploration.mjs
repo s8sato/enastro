@@ -371,15 +371,24 @@ export function parseModifiedAt(formatted) {
 const EXPLORATION_CHANGED_EVENT = "enastro:exploration-changed";
 
 /**
- * Reads the current log from localStorage and folds it as of `cursorTs`
- * (defaulting to "now"). Exposed for other client modules (e.g.
- * graph-view.mjs) that want the current status snapshot without wiring up
- * their own log-management logic.
+ * Reads the current log from localStorage and folds it as of `cursorTs`.
+ * If `cursorTs` isn't given, defaults to the *persisted* rewind cursor
+ * (`loadCursor()`, REQ-EXPLORE-009) rather than always "now" — otherwise,
+ * a page whose script computes status before this module's own `main()`
+ * has broadcast the persisted cursor's status via
+ * `enastro:exploration-changed` would flash (and, if that one-shot
+ * broadcast is missed entirely — e.g. it fires synchronously during
+ * `main()`, before a later `<script>` tag's module has registered its
+ * listener, as happens on the graph page) permanently show the live
+ * status instead of the still-rewound one. Exposed for other client
+ * modules (e.g. graph-view.mjs) that want the current status snapshot
+ * without wiring up their own log-management logic.
  * @param {number} [cursorTs]
  * @returns {Map<string, string>}
  */
 export function getStatusSnapshot(cursorTs) {
-  return computeStatusAsOf(loadState(), cursorTs);
+  const resolvedCursorTs = cursorTs ?? loadCursor() ?? Infinity;
+  return computeStatusAsOf(loadState(), resolvedCursorTs);
 }
 
 function dispatchChanged(statusById, cursorTs) {

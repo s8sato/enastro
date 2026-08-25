@@ -7,6 +7,7 @@ import {
   appendEvent,
   computeStatusAsOf,
   getLastEventTimestamp,
+  getStatusSnapshot,
   isNowTs,
   loadCursor,
   loadDrawerOpen,
@@ -442,5 +443,48 @@ describe("loadDrawerOpen/saveDrawerOpen (History drawer persistence, REQ-EXPLORE
   it("returns false from saveDrawerOpen (without throwing) when localStorage.setItem fails", () => {
     (localStorage as unknown as { simulateQuotaExceeded(): void }).simulateQuotaExceeded();
     expect(saveDrawerOpen(true)).toBe(false);
+  });
+});
+
+describe("getStatusSnapshot (resolves the persisted rewind cursor by default, REQ-EXPLORE-009)", () => {
+  it("defaults to 'now' when no cursor is persisted", () => {
+    appendEvent(loadState(), "note-a", "read");
+    expect(getStatusSnapshot().get("note-a")).toBe("read");
+  });
+
+  it("defaults to the persisted past cursor rather than always 'now' — the bug this guards against: a page (e.g. graph-view.mjs) computing status before the shared History UI's one-shot 'enastro:exploration-changed' broadcast reflects a rewound cursor would otherwise show live status instead", () => {
+    const base = Date.now() - 60_000;
+    const st = {
+      snapshot: {},
+      log: [
+        { id: "note-a", status: "read", ts: base + 100 },
+        { id: "note-a", status: "unread", ts: base + 200 },
+      ],
+      snapshotUpdatedAt: base,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+    saveCursor(base + 100); // rewound to the "read" point, before the "unread" event
+    expect(getStatusSnapshot().get("note-a")).toBe("read");
+  });
+
+  it("defaults to the Snapshot when that's the persisted cursor", () => {
+    const st = { snapshot: { "note-a": "read" }, log: [{ id: "note-a", status: "unread", ts: 100 }], snapshotUpdatedAt: 0 };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+    saveCursor(SNAPSHOT_CURSOR_TS);
+    expect(getStatusSnapshot().get("note-a")).toBe("read");
+  });
+
+  it("an explicit cursorTs argument overrides the persisted cursor", () => {
+    const st = {
+      snapshot: {},
+      log: [
+        { id: "note-a", status: "read", ts: 100 },
+        { id: "note-a", status: "unread", ts: 200 },
+      ],
+      snapshotUpdatedAt: 0,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+    saveCursor(100); // persisted cursor says "read"
+    expect(getStatusSnapshot(Infinity).get("note-a")).toBe("unread"); // explicit "now" wins
   });
 });
