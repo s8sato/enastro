@@ -80,7 +80,7 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 | REQ-EXPLORE-001〜005 | unit test（`src/render/client/exploration.test.ts`、ログ計算・rewind・quota捕捉）+ browser E2E test（`src/e2e/exploration.e2e.test.ts`、Mark as read・index/graph の減光・rewind・ストレージ警告） | basic-vault |
 | REQ-EXPLORE-006 | privacy scan 相当の確認（既存の `site.privacy.test.ts` 等を再実行し、`graph.json`/`search-index.json`/生成 HTML に既読情報が含まれないことを確認） | basic-vault |
 | REQ-EXPLORE-007 | unit test（`parseModifiedAt`, search-index.json 同期ロジック）+ browser E2E test（ID不一致通知、更新されたノートの自動unread通知、fetch失敗時のフォールバック） | basic-vault |
-| REQ-EXPLORE-008 | unit test（`resetLogAt`, `pruneLogUntil`）+ browser E2E test（Reset to here / Prune until here の確認ダイアログ・実行後の状態） | basic-vault |
+| REQ-EXPLORE-008 | unit test（`resetLogAt`, `squashStateUntil`）+ browser E2E test（Reset to here / Squash until here の確認ダイアログ・実行後の状態） | basic-vault |
 
 ## 3. 引き続き自動検証を実施しない項目 [DEFERRED]
 

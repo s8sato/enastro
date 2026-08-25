@@ -194,3 +194,67 @@ History エントリのタイムスタンプ表示を、`formatLocalTimestamp`�
 表示という前提はそのままに、History リスト内で同一の（閲覧者の）タイムゾーンを反復表示する
 ことが冗長と判断したため。ノートページの読了日時表示は元々 `formatLocalDateOnly` を使用して
 おり、本改訂によって表示形式が統一される。
+
+## Amendment (2026-08-25): Snapshot 概念の導入、Prune の Squash 化（DECIDED）
+
+ユーザーからの追加要望に基づき、本 ADR を以下のとおり改訂する。上記
+「Amendment (2026-08-24): 初期状態エントリの選択可能化」で導入した "Initial state" エントリと、
+「Amendment (2026-08-24): Reset to here / Prune until here」で導入した "Prune until here" は、
+本改訂によりそれぞれ次のとおり置き換えられる。
+
+### データモデル: 永続化された「Snapshot」の追加
+
+`localStorage` に保存するデータを、追記型イベントログの配列単体から、
+`{ snapshot: Record<id, "read" | "unread">, log: {id, status, ts}[] }` という形へ変更する。
+`snapshot` は、それ以前に Squash された（後述）イベント群の正味の効果を保持する、恒久的な
+「基点」の状態マップである。現在のステータスは、`snapshot` を初期値としてログを `ts` の昇順に
+fold することで決定する（`computeStatusAsOf(state, cursorTs)`）——`snapshot` に一切変更がなければ
+既存の「空マップから fold する」動作と完全に一致するため、この変更は既存の rewind ロジックに
+一切の特殊分岐を必要としない。
+
+ストレージキーを `enastro:exploration:v1` から `enastro:exploration:v2` へ変更し、`v2` の
+データが存在しない場合にのみ `v1` の（配列単体の）データを `{ snapshot: {}, log: legacyLog }`
+として一度だけ読み替える（`loadState()`）。`v1` のキー自体は能動的に削除せず、そのまま
+残す（無害な残留データとして扱う）。
+
+### "Initial state" を "Snapshot" に改名
+
+History リスト末尾の synthetic エントリを "Initial state" から "Snapshot" に改名する。これは
+単なる表示上の改名ではなく、意味も変化する: 従来「イベントが一切記録されていない、全ノート
+未読の初期状態」という固定された意味だったのに対し、Squash 操作（後述）により内容が更新され
+うる、永続化された実体を指すようになる。カーソルの sentinel 値
+`INITIAL_CURSOR_TS`（`Number.NEGATIVE_INFINITY`）は `SNAPSHOT_CURSOR_TS` に改名するが、値・
+役割（実イベントの `ts` は常にこれより大きいため、このカーソルでは log が一切 fold されず
+`snapshot` の内容がそのまま返る）は変わらない。
+
+### "Prune until here" を "Squash until here" に改名し、意味を変更
+
+従来の Prune は「正味の変化がない read/unread の往復（相殺ペア）のみ」を削除する操作だった。
+Squash はこれを置き換え、範囲 `(-∞, cursorTs]` の**すべて**のイベント（正味の変化があった
+ものも含む）を対象に、その範囲での折り畳み結果（`computeStatusAsOf(state, cursorTs)`）を
+新しい `snapshot` として採用し、対象イベントをログから完全に削除する
+（`squashStateUntil(state, cursorTs)`）。正味の効果は保持されたまま、個々のイベント履歴が
+`snapshot` に圧縮される。`cursorTs` より後のイベントは変更しない。
+
+確認ダイアログの文言も、この意味変化を反映して更新する（「no-op の履歴のみ削除する」から
+「範囲内の履歴全体を Snapshot に畳み込み、個々のイベントを削除する」旨に変更）。
+
+Squash 実行後のカーソルの扱い（`cursorTs = null` で "now" に戻す）は、Reset/Prune の既存の
+挙動を踏襲し変更しない。Squash 後のカーソルを新しい Snapshot の位置に置く案は、別途検討中の
+「History 上のカーソル位置のブラウザ永続化・ボタン活性条件の再定義」というユーザーの別要望
+（本改訂の対象外）で扱う。
+
+### "Reset to here" は変更なし
+
+Reset to here は `snapshot` を一切参照・変更しない（`state.log` の末尾切り捨てのみ）。Snapshot
+概念とは独立した操作のままとする。
+
+検討した代替案:
+
+- ストレージキーを `v1` のまま据え置き、配列単体のデータ形状をそのまま `{snapshot, log}` に
+  変更する: 既存ユーザーの `localStorage` に残る配列単体のデータを、新しい読み込みロジックが
+  誤ってオブジェクトとして解釈しようとして壊れる（配列に `.log` プロパティは存在しない）ため、
+  安全な移行のためにキーをバージョンアップし、旧キーからの一度きりの移行パスを設けることとした。
+- Squash 後のカーソルを新しい Snapshot の位置に固定する: カーソルの永続化・ボタン活性条件の
+  再設計と合わせて別途検討する方が一貫性があると判断し、本改訂ではカーソルの扱いは変更しない。
+

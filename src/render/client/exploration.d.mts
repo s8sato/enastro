@@ -4,18 +4,27 @@ export interface ExplorationEvent {
   ts: number;
 }
 
+export interface ExplorationState {
+  snapshot: Record<string, string>;
+  log: ExplorationEvent[];
+}
+
 export const STORAGE_KEY: string;
 
-export function loadLog(): ExplorationEvent[];
+export const SNAPSHOT_CURSOR_TS: number;
+
+export function loadState(): ExplorationState;
+
+export function saveState(state: ExplorationState): boolean;
 
 export function appendEvent(
-  log: ExplorationEvent[],
+  state: ExplorationState,
   id: string,
   status: string,
-): { log: ExplorationEvent[]; ok: boolean; error?: unknown };
+): { state: ExplorationState; ok: boolean; error?: unknown };
 
 export function computeStatusAsOf(
-  log: ExplorationEvent[],
+  state: ExplorationState,
   cursorTs?: number,
 ): Map<string, string>;
 
@@ -27,7 +36,7 @@ export function getLastEventTimestamp(
 
 export function resetLogAt(log: ExplorationEvent[], cursorTs: number): ExplorationEvent[];
 
-export function pruneLogUntil(log: ExplorationEvent[], cursorTs: number): ExplorationEvent[];
+export function squashStateUntil(state: ExplorationState, cursorTs: number): ExplorationState;
 
 export function parseModifiedAt(formatted: unknown): number | undefined;
 

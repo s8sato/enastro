@@ -1,19 +1,28 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  SNAPSHOT_CURSOR_TS,
   STORAGE_KEY,
   appendEvent,
   computeStatusAsOf,
   getLastEventTimestamp,
-  loadLog,
+  loadState,
   parseModifiedAt,
-  pruneLogUntil,
   resetLogAt,
+  squashStateUntil,
 } from "./exploration.mjs";
+
+/** Legacy (pre-Snapshot) storage key, mirrored here for migration tests. */
+const LEGACY_STORAGE_KEY = "enastro:exploration:v1";
+
+/** Shorthand for building a `{snapshot, log}` state in tests. */
+function state(log: { id: string; status: string; ts: number }[], snapshot: Record<string, string> = {}) {
+  return { snapshot, log };
+}
 
 /**
  * Minimal in-memory localStorage mock (vitest's default environment is
  * plain Node, which has no `localStorage` global). Kept intentionally
- * small — just enough to exercise `loadLog`/`appendEvent`'s persistence
+ * small — just enough to exercise `loadState`/`appendEvent`'s persistence
  * behavior, including a way to simulate quota-exceeded failures.
  */
 class MemoryStorage implements Storage {
@@ -58,39 +67,53 @@ beforeEach(() => {
   globalThis.localStorage = new MemoryStorage();
 });
 
-describe("loadLog (REQ-EXPLORE-001)", () => {
-  it("returns an empty array when nothing has been stored yet", () => {
-    expect(loadLog()).toEqual([]);
+describe("loadState (REQ-EXPLORE-001)", () => {
+  it("returns an empty snapshot/log when nothing has been stored yet", () => {
+    expect(loadState()).toEqual({ snapshot: {}, log: [] });
   });
 
-  it("returns [] rather than throwing when the stored value is corrupt JSON", () => {
+  it("returns an empty state rather than throwing when the stored value is corrupt JSON", () => {
     localStorage.setItem(STORAGE_KEY, "{not valid json");
-    expect(loadLog()).toEqual([]);
+    expect(loadState()).toEqual({ snapshot: {}, log: [] });
   });
 
-  it("returns [] rather than throwing when the stored value isn't an array", () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ not: "an array" }));
-    expect(loadLog()).toEqual([]);
+  it("returns an empty state rather than throwing when the stored value has no log array", () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ not: "a state" }));
+    expect(loadState()).toEqual({ snapshot: {}, log: [] });
+  });
+
+  it("migrates a legacy v1 bare event-log array into {snapshot: {}, log}", () => {
+    const legacyLog = [{ id: "note-a", status: "read", ts: 100 }];
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(legacyLog));
+    expect(loadState()).toEqual({ snapshot: {}, log: legacyLog });
+  });
+
+  it("prefers the v2 {snapshot, log} state over a stale legacy v1 array", () => {
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify([{ id: "note-z", status: "read", ts: 1 }]));
+    const v2State = { snapshot: { "note-a": "read" }, log: [] };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(v2State));
+    expect(loadState()).toEqual(v2State);
   });
 });
 
 describe("appendEvent (REQ-EXPLORE-001, REQ-EXPLORE-002)", () => {
-  it("persists the new event and returns ok: true on success", () => {
-    const { log, ok } = appendEvent([], "note-a", "read");
+  it("persists the new event (snapshot passed through) and returns ok: true on success", () => {
+    const { state: next, ok } = appendEvent(state([], { "note-z": "read" }), "note-a", "read");
     expect(ok).toBe(true);
-    expect(log).toHaveLength(1);
-    expect(log[0]).toMatchObject({ id: "note-a", status: "read" });
-    expect(loadLog()).toEqual(log);
+    expect(next.snapshot).toEqual({ "note-z": "read" });
+    expect(next.log).toHaveLength(1);
+    expect(next.log[0]).toMatchObject({ id: "note-a", status: "read" });
+    expect(loadState()).toEqual(next);
   });
 
   it("still returns the appended event in-memory (but ok: false) when storage is full", () => {
     localStorage.simulateQuotaExceeded();
-    const { log, ok, error } = appendEvent([], "note-a", "read");
+    const { state: next, ok, error } = appendEvent(state([]), "note-a", "read");
     expect(ok).toBe(false);
     expect(error).toBeInstanceOf(Error);
-    expect(log).toHaveLength(1);
+    expect(next.log).toHaveLength(1);
     // The failed write must not have silently succeeded:
-    expect(loadLog()).toEqual([]);
+    expect(loadState()).toEqual({ snapshot: {}, log: [] });
   });
 });
 
@@ -102,19 +125,19 @@ describe("computeStatusAsOf (REQ-EXPLORE-001, REQ-EXPLORE-003)", () => {
   ];
 
   it("defaults to folding the entire log (live/'now' view)", () => {
-    const status = computeStatusAsOf(log);
+    const status = computeStatusAsOf(state(log));
     expect(status.get("note-a")).toBe("unread");
     expect(status.get("note-b")).toBe("read");
   });
 
   it("ignores events after the given cursor, enabling rewind", () => {
-    const status = computeStatusAsOf(log, 150);
+    const status = computeStatusAsOf(state(log), 150);
     expect(status.get("note-a")).toBe("read");
     expect(status.has("note-b")).toBe(false);
   });
 
   it("is unaffected by ids that no longer exist in the current graph (topology-change resilience)", () => {
-    const status = computeStatusAsOf(log);
+    const status = computeStatusAsOf(state(log));
     // A deleted note's id simply remains an ordinary (harmless) map entry;
     // callers only ever look up ids that are still present in graph.json /
     // the note list, so stale ids never surface anywhere.
@@ -122,8 +145,22 @@ describe("computeStatusAsOf (REQ-EXPLORE-001, REQ-EXPLORE-003)", () => {
   });
 
   it("returns 'unread' semantics (absence) for notes with no events at all", () => {
-    const status = computeStatusAsOf(log);
+    const status = computeStatusAsOf(state(log));
     expect(status.has("note-c")).toBe(false);
+  });
+
+  it("seeds the result from the Snapshot, then layers the log on top", () => {
+    const snapshot = { "note-a": "read", "note-c": "read" };
+    const status = computeStatusAsOf(state(log, snapshot));
+    expect(status.get("note-a")).toBe("unread"); // log's later event wins
+    expect(status.get("note-b")).toBe("read"); // from log only
+    expect(status.get("note-c")).toBe("read"); // from snapshot only
+  });
+
+  it("returns exactly the Snapshot's content when cursor is SNAPSHOT_CURSOR_TS (no log folding)", () => {
+    const snapshot = { "note-a": "read" };
+    const status = computeStatusAsOf(state(log, snapshot), SNAPSHOT_CURSOR_TS);
+    expect(status).toEqual(new Map(Object.entries(snapshot)));
   });
 });
 
@@ -170,57 +207,71 @@ describe("resetLogAt (Reset to here, ADR-0014)", () => {
 
   it("reproduces exactly the state the viewer was rewound to (git reset --hard semantics)", () => {
     const reset = resetLogAt(log, 300);
-    expect(computeStatusAsOf(reset)).toEqual(computeStatusAsOf(log, 300));
+    expect(computeStatusAsOf(state(reset))).toEqual(computeStatusAsOf(state(log), 300));
   });
 });
 
-describe("pruneLogUntil (Prune until here, ADR-0014)", () => {
-  it("removes an id's entire in-window history when it nets to no change (round-trip)", () => {
+describe("squashStateUntil (Squash until here, ADR-0014)", () => {
+  it("folds a net-no-op read/unread round-trip into the Snapshot as its absence (unread)", () => {
     const log = [
       { id: "note-a", status: "read", ts: 100 },
       { id: "note-a", status: "unread", ts: 200 },
     ];
-    const pruned = pruneLogUntil(log, 300);
-    expect(pruned).toEqual([]);
+    const squashed = squashStateUntil(state(log), 300);
+    expect(squashed.log).toEqual([]);
+    expect(squashed.snapshot).toEqual({ "note-a": "unread" });
   });
 
-  it("keeps only the last in-window event for an id whose net status changed", () => {
+  it("folds a net-changed id's final status into the Snapshot, removing all its in-window events", () => {
     const log = [
       { id: "note-a", status: "read", ts: 100 },
       { id: "note-a", status: "unread", ts: 200 },
       { id: "note-a", status: "read", ts: 300 },
     ];
-    const pruned = pruneLogUntil(log, 400);
-    expect(pruned).toEqual([{ id: "note-a", status: "read", ts: 300 }]);
+    const squashed = squashStateUntil(state(log), 400);
+    expect(squashed.log).toEqual([]);
+    expect(squashed.snapshot).toEqual({ "note-a": "read" });
   });
 
-  it("leaves events after the cursor, and other ids, untouched", () => {
+  it("leaves events after the cursor untouched, and folds only ids affected up to the cursor", () => {
     const log = [
       { id: "note-a", status: "read", ts: 100 },
       { id: "note-a", status: "unread", ts: 200 },
       { id: "note-b", status: "read", ts: 250 },
       { id: "note-a", status: "read", ts: 500 },
     ];
-    const pruned = pruneLogUntil(log, 300);
-    expect(pruned).toEqual([
-      { id: "note-b", status: "read", ts: 250 },
-      { id: "note-a", status: "read", ts: 500 },
-    ]);
+    const squashed = squashStateUntil(state(log), 300);
+    expect(squashed.log).toEqual([{ id: "note-a", status: "read", ts: 500 }]);
+    expect(squashed.snapshot).toEqual({ "note-a": "unread", "note-b": "read" });
   });
 
-  it("preserves the folded status at every point at/after the cursor (semantically: absence == 'unread')", () => {
+  it("merges with (and can override) a pre-existing Snapshot", () => {
+    const log = [{ id: "note-a", status: "read", ts: 200 }];
+    const squashed = squashStateUntil(state(log, { "note-a": "unread", "note-z": "read" }), 300);
+    expect(squashed.log).toEqual([]);
+    expect(squashed.snapshot).toEqual({ "note-a": "read", "note-z": "read" });
+  });
+
+  it("preserves the folded status at every point at/after the cursor, including non-no-op history", () => {
     const log = [
       { id: "note-a", status: "read", ts: 100 },
       { id: "note-a", status: "unread", ts: 200 },
       { id: "note-b", status: "read", ts: 250 },
       { id: "note-a", status: "read", ts: 500 },
     ];
-    const pruned = pruneLogUntil(log, 300);
-    const asOf = (l: typeof log, id: string, ts: number) => computeStatusAsOf(l, ts).get(id) ?? "unread";
-    expect(asOf(pruned, "note-a", 300)).toBe(asOf(log, "note-a", 300));
-    expect(asOf(pruned, "note-b", 300)).toBe(asOf(log, "note-b", 300));
-    expect(asOf(pruned, "note-a", Infinity)).toBe(asOf(log, "note-a", Infinity));
-    expect(asOf(pruned, "note-b", Infinity)).toBe(asOf(log, "note-b", Infinity));
+    const before = state(log);
+    const squashed = squashStateUntil(before, 300);
+    const asOf = (s: typeof before, ts: number, id: string) => computeStatusAsOf(s, ts).get(id) ?? "unread";
+    expect(asOf(squashed, 300, "note-a")).toBe(asOf(before, 300, "note-a"));
+    expect(asOf(squashed, 300, "note-b")).toBe(asOf(before, 300, "note-b"));
+    expect(asOf(squashed, Infinity, "note-a")).toBe(asOf(before, Infinity, "note-a"));
+    expect(asOf(squashed, Infinity, "note-b")).toBe(asOf(before, Infinity, "note-b"));
+  });
+
+  it("is a no-op when cursor is SNAPSHOT_CURSOR_TS (nothing precedes the Snapshot)", () => {
+    const log = [{ id: "note-a", status: "read", ts: 100 }];
+    const squashed = squashStateUntil(state(log, { "note-z": "read" }), SNAPSHOT_CURSOR_TS);
+    expect(squashed).toEqual({ snapshot: { "note-z": "read" }, log });
   });
 });
 

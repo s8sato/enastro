@@ -127,7 +127,7 @@ describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
 });
 
 describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPLORE-008)", () => {
-  const STORAGE_KEY = "enastro:exploration:v1";
+  const STORAGE_KEY = "enastro:exploration:v2";
 
   it("keeps the rewind panel open after returning to now, showing the cursor is back at 'now'", async () => {
     await page.goto(`${baseUrl}/notes/note-a.html`);
@@ -142,7 +142,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     const panel = page.locator("#exploration-rewind-panel");
     await expect.poll(() => panel.isVisible()).toBe(true);
 
-    // No button click (Return/Prune/Reset) closes the drawer — the cursor
+    // No button click (Return/Squash/Reset) closes the drawer — the cursor
     // position stays visible so the user can see the effect of what they
     // just clicked without having to reopen it.
     await page.click("#exploration-return-to-now");
@@ -156,11 +156,14 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
         const base = Date.now() - 60_000;
         localStorage.setItem(
           key,
-          JSON.stringify([
-            { id: "note-a", status: "read", ts: base + 100 },
-            { id: "note-a", status: "unread", ts: base + 200 },
-            { id: "note-a", status: "read", ts: base + 300 },
-          ]),
+          JSON.stringify({
+            snapshot: {},
+            log: [
+              { id: "note-a", status: "read", ts: base + 100 },
+              { id: "note-a", status: "unread", ts: base + 200 },
+              { id: "note-a", status: "read", ts: base + 300 },
+            ],
+          }),
         );
       },
       { key: STORAGE_KEY },
@@ -172,7 +175,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     await page.click("#exploration-rewind-toggle");
     const historyEntries = page.locator("#exploration-history-list button");
-    // 3 real events + the synthetic "Initial state" entry always appended
+    // 3 real events + the synthetic "Snapshot" entry always appended
     // at the end of the list.
     await expect.poll(() => historyEntries.count()).toBe(4);
 
@@ -193,11 +196,14 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     }
   });
 
-  it("always shows a selectable 'Initial state' entry at the end of the history list, resetting all notes to unread (REQ-EXPLORE-003)", async () => {
+  it("always shows a selectable 'Snapshot' entry at the end of the history list, resetting all notes to unread (REQ-EXPLORE-003)", async () => {
     await page.goto(`${baseUrl}/notes/note-a.html`);
     await page.evaluate(
       ({ key }) => {
-        localStorage.setItem(key, JSON.stringify([{ id: "note-a", status: "read", ts: Date.now() }]));
+        localStorage.setItem(
+          key,
+          JSON.stringify({ snapshot: {}, log: [{ id: "note-a", status: "read", ts: Date.now() }] }),
+        );
       },
       { key: STORAGE_KEY },
     );
@@ -210,17 +216,17 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     const historyEntries = page.locator("#exploration-history-list button");
     await expect.poll(() => historyEntries.count()).toBe(2);
 
-    const initialEntry = historyEntries.last();
-    expect(await initialEntry.textContent()).toMatch(/Initial state/);
+    const snapshotEntry = historyEntries.last();
+    expect(await snapshotEntry.textContent()).toMatch(/Snapshot/);
     // No timezone marker in any history entry's timestamp:
     for (const entry of await historyEntries.all()) {
       expect(await entry.textContent()).not.toMatch(/UTC/);
     }
 
-    await initialEntry.click();
-    await expect.poll(() => initialEntry.getAttribute("class")).toContain("active");
-    expect(await initialEntry.getAttribute("aria-current")).toBe("true");
-    // Rewound to the initial state: the note reads as unread again, and
+    await snapshotEntry.click();
+    await expect.poll(() => snapshotEntry.getAttribute("class")).toContain("active");
+    expect(await snapshotEntry.getAttribute("aria-current")).toBe("true");
+    // Rewound to the Snapshot: the note reads as unread again, and
     // status-changing is disabled (read-only, like any other rewind).
     expect(await markReadButton.textContent()).toBe("Mark as read");
     expect(await markReadButton.isDisabled()).toBe(true);
@@ -253,7 +259,10 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
       ({ key }) => {
         localStorage.setItem(
           key,
-          JSON.stringify([{ id: "note-does-not-exist", status: "read", ts: Date.now() }]),
+          JSON.stringify({
+            snapshot: {},
+            log: [{ id: "note-does-not-exist", status: "read", ts: Date.now() }],
+          }),
         );
       },
       { key: STORAGE_KEY },
@@ -276,7 +285,10 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
       ({ key }) => {
         // A read event dated far in the past is guaranteed to predate the
         // note's build-time modifiedAt, triggering the auto-unread sync.
-        localStorage.setItem(key, JSON.stringify([{ id: "note-a", status: "read", ts: 1 }]));
+        localStorage.setItem(
+          key,
+          JSON.stringify({ snapshot: {}, log: [{ id: "note-a", status: "read", ts: 1 }] }),
+        );
       },
       { key: STORAGE_KEY },
     );
@@ -299,7 +311,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     const historyEntries = page.locator("#exploration-history-list button");
     // The original seeded "read" event plus the auto-appended "unread" one,
-    // plus the synthetic "Initial state" entry:
+    // plus the synthetic "Snapshot" entry:
     await expect.poll(() => historyEntries.count()).toBe(3);
   });
 
@@ -313,11 +325,14 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
         const base = Date.now() - 60_000;
         localStorage.setItem(
           key,
-          JSON.stringify([
-            { id: "note-a", status: "read", ts: base + 100 },
-            { id: "note-a", status: "unread", ts: base + 200 },
-            { id: "note-a", status: "read", ts: base + 300 },
-          ]),
+          JSON.stringify({
+            snapshot: {},
+            log: [
+              { id: "note-a", status: "read", ts: base + 100 },
+              { id: "note-a", status: "unread", ts: base + 200 },
+              { id: "note-a", status: "read", ts: base + 300 },
+            ],
+          }),
         );
       },
       { key: STORAGE_KEY },
@@ -326,7 +341,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     await page.click("#exploration-rewind-toggle");
     const historyEntries = page.locator("#exploration-history-list button");
-    // 3 real events + the synthetic "Initial state" entry:
+    // 3 real events + the synthetic "Snapshot" entry:
     await expect.poll(() => historyEntries.count()).toBe(4);
     // Entries are listed newest-first; rewind to the middle (ts: base+200).
     await historyEntries.nth(1).click();
@@ -337,29 +352,34 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     // Events at/before the cursor (base+100, base+200) are kept untouched;
     // the event after the cursor (base+300, "read") is permanently gone —
     // this actually reverts to the rewound ("unread") state. (+1 for the
-    // synthetic "Initial state" entry, always present.)
+    // synthetic "Snapshot" entry, always present.)
     await expect.poll(() => historyEntries.count()).toBe(3);
-    const stored = JSON.parse((await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)) ?? "[]");
-    expect(stored).toHaveLength(2);
-    expect(stored.every((event: { status: string }) => event.status !== undefined)).toBe(true);
-    expect(stored[stored.length - 1].status).toBe("unread"); // the rewound-to state
+    const stored = JSON.parse(
+      (await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)) ?? '{"snapshot":{},"log":[]}',
+    );
+    expect(stored.log).toHaveLength(2);
+    expect(stored.log.every((event: { status: string }) => event.status !== undefined)).toBe(true);
+    expect(stored.log[stored.log.length - 1].status).toBe("unread"); // the rewound-to state
 
     const markReadButton = page.locator("[data-mark-read]");
     expect(await markReadButton.textContent()).toBe("Mark as read");
   });
 
-  it("supports Prune until here, removing net-no-op read/unread round-trips (REQ-EXPLORE-008)", async () => {
+  it("supports Squash until here, folding read/unread history into the Snapshot (REQ-EXPLORE-008)", async () => {
     await page.goto(`${baseUrl}/notes/note-a.html`);
     await page.evaluate(
       ({ key }) => {
         const base = Date.now() - 60_000;
         localStorage.setItem(
           key,
-          JSON.stringify([
-            { id: "note-a", status: "read", ts: base + 100 },
-            { id: "note-a", status: "unread", ts: base + 200 },
-            { id: "note-b", status: "read", ts: base + 250 },
-          ]),
+          JSON.stringify({
+            snapshot: {},
+            log: [
+              { id: "note-a", status: "read", ts: base + 100 },
+              { id: "note-a", status: "unread", ts: base + 200 },
+              { id: "note-b", status: "read", ts: base + 250 },
+            ],
+          }),
         );
       },
       { key: STORAGE_KEY },
@@ -368,18 +388,27 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
     await page.click("#exploration-rewind-toggle");
     const historyEntries = page.locator("#exploration-history-list button");
-    // 3 real events + the synthetic "Initial state" entry:
+    // 3 real events + the synthetic "Snapshot" entry:
     await expect.poll(() => historyEntries.count()).toBe(4);
-    // Rewind to the most recent entry so "Prune until here" covers everything.
+    // Rewind to the most recent entry so "Squash until here" covers everything.
     await historyEntries.first().click();
 
     page.once("dialog", (dialog) => dialog.accept());
-    await page.click("#exploration-prune-here");
+    await page.click("#exploration-squash-here");
 
-    // note-a's read→unread round trip nets to no change and is fully
-    // annihilated; note-b's single "read" event survives. (+1 for the
-    // synthetic "Initial state" entry, always present.)
-    await expect.poll(() => historyEntries.count()).toBe(2);
-    expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toMatch(/"id":"note-b"/);
+    // All 3 events are folded into the Snapshot and removed from the log:
+    // note-a's read→unread round trip nets to "unread", note-b's single
+    // "read" event nets to "read". (+1 for the synthetic "Snapshot" entry,
+    // always present.)
+    await expect.poll(() => historyEntries.count()).toBe(1);
+    const stored = JSON.parse(
+      (await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)) ?? '{"snapshot":{},"log":[]}',
+    );
+    expect(stored.log).toEqual([]);
+    expect(stored.snapshot).toEqual({ "note-a": "unread", "note-b": "read" });
+
+    // Net effect is unchanged after the squash: note-a still reads unread.
+    const markReadButton = page.locator("[data-mark-read]");
+    expect(await markReadButton.textContent()).toBe("Mark as read");
   });
 });

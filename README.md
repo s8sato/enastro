@@ -241,7 +241,7 @@ Personal Access Token の管理が必要になります。この private → pub
   タグによるノードフィルタリング）
 - GitHub Actions による CI（typecheck・test）と、GitHub Pages への自動デモ公開
 - ブラウザの `localStorage` に閉じた探索ステータス（既読/未読）の記録、rewind による過去時点の
-  巻き戻し表示、History パネルからの `Reset to here` / `Prune until here`
+  巻き戻し表示、History パネルからの `Reset to here` / `Squash until here`
 - 12種のカラーテーマをクライアント完結で切り替え可能（ビルド成果物には一切書き込まれない）
 
 MCP/CLI query interface などは引き続き対象外です。詳細は

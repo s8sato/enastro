@@ -906,14 +906,15 @@ span.broken-link {
 }
 
 /* The 3-tier rewind action buttons (REQ-EXPLORE-003/008), ordered by
- * increasing risk: Return (safe, reversible) < Prune (destructive but only
- * discards no-op history) < Reset (destructive and can discard real
- * history). Return stays theme-following/neutral; Prune/Reset borrow the
+ * increasing risk: Return (safe, reversible) < Squash (destructive but
+ * preserves net read/unread effect) < Reset (destructive and can discard
+ * real
+ * history). Return stays theme-following/neutral; Squash/Reset borrow the
  * same fixed severity tokens as the warning/notice boxes above
  * (`--warn`/`--danger`) so risk level reads consistently across all 12
  * themes. All 3 are always visible (never `hidden`); Return is always
  * enabled (returning to "now" is safe/idempotent even while already
- * live), while Prune/Reset are `disabled` (exploration.mjs's `update()`)
+ * live), while Squash/Reset are `disabled` (exploration.mjs's `update()`)
  * until a past point is actually selected, since both require a rewound
  * cursor to act on.
  */
@@ -929,7 +930,7 @@ span.broken-link {
   cursor: pointer;
 }
 
-#exploration-prune-here {
+#exploration-squash-here {
   display: block;
   width: 100%;
   margin: 0 0 0.5rem;
@@ -953,10 +954,10 @@ span.broken-link {
   cursor: pointer;
 }
 
-/* Prune/Reset only (Return has no disabled state, see above) — dimmed and
+/* Squash/Reset only (Return has no disabled state, see above) — dimmed and
  * inert while no past point is selected, same pattern as
  * `.mark-read-button:disabled`. */
-#exploration-prune-here:disabled,
+#exploration-squash-here:disabled,
 #exploration-reset-here:disabled {
   opacity: 0.3;
   cursor: not-allowed;
@@ -1026,7 +1027,7 @@ span.broken-link {
     center / contain no-repeat;
 }
 
-#exploration-history-list .verb-icon.is-initial {
+#exploration-history-list .verb-icon.is-snapshot {
   background-color: var(--accent-dim);
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2 L14 9 L21 9 L15.5 13.5 L17.5 21 L12 16.5 L6.5 21 L8.5 13.5 L3 9 L10 9 Z'/%3E%3C/svg%3E")
     center / contain no-repeat;

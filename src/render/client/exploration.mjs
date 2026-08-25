@@ -6,12 +6,14 @@
  * invariant, which this feature must not violate. Runs directly in the
  * browser as an ES module; no bundler/build step needed.
  *
- * Data model: an append-only event log, `{id, status, ts}[]`, stored under
- * STORAGE_KEY. The *current* status of a note is derived by folding the
- * log up to a given point in time (a "cursor"): later events for the same
- * id override earlier ones. This is what lets the rewind UI show the
- * list/graph as it looked at any past moment without ever deleting
- * history (REQ-EXPLORE-003).
+ * Data model: an append-only event log, `{id, status, ts}[]`, plus a
+ * persisted "Snapshot" base map (`id -> status`), together stored under
+ * STORAGE_KEY as `{snapshot, log}` (ADR-0014, "Snapshot 概念の導入"). The
+ * *current* status of a note is derived by starting from the Snapshot and
+ * folding the log up to a given point in time (a "cursor") on top of it:
+ * later events for the same id override earlier ones (and the Snapshot).
+ * This is what lets the rewind UI show the list/graph as it looked at any
+ * past moment without ever deleting history (REQ-EXPLORE-003).
  *
  * Status is keyed purely by note id, so it survives graph topology changes
  * (added/removed nodes or edges) unaffected (REQ-EXPLORE-004): ids no
@@ -23,77 +25,121 @@
  * reload, since it is only meant for momentarily reviewing history within
  * the current session.
  *
- * Two operations *do* permanently rewrite the log, as an explicit,
+ * Two operations *do* permanently rewrite persisted state, as an explicit,
  * user-confirmed exception to the above (ADR-0014, "Reset to here" /
- * "Prune until here"): `resetLogAt()` actually reverts to the rewound
+ * "Squash until here"): `resetLogAt()` actually reverts to the rewound
  * state by discarding every event *after* the cursor (like `git reset
- * --hard`), and `pruneLogUntil()` removes no-op (net-unchanged) event
- * pairs from the range up to the cursor. Both are pure functions; the
- * DOM-wiring code below is responsible for persisting their result and
- * requires an explicit confirmation before doing so.
+ * --hard`), and `squashStateUntil()` folds every event up to the cursor
+ * into the Snapshot and removes them from the log (net effect preserved,
+ * history compacted). Both are pure functions; the DOM-wiring code below
+ * is responsible for persisting their result and requires an explicit
+ * confirmation before doing so.
  */
 import { formatLocalDateOnly } from "./format-local-time.mjs";
 
-export const STORAGE_KEY = "enastro:exploration:v1";
+export const STORAGE_KEY = "enastro:exploration:v2";
+
+/** Legacy (pre-Snapshot) storage key: a bare event-log array, no Snapshot. */
+const LEGACY_STORAGE_KEY = "enastro:exploration:v1";
 
 /**
- * Sentinel cursor value representing the "initial state" — before any
- * event has ever been recorded (all notes implicitly unread). Folding the
- * log up to this cursor (`computeStatusAsOf(log, INITIAL_CURSOR_TS)`)
- * naturally yields an empty status map, since every real event's `ts` is a
+ * Sentinel cursor value representing "the Snapshot" — the persisted base
+ * state before any log event still on record. Folding the log up to this
+ * cursor (`computeStatusAsOf(state, SNAPSHOT_CURSOR_TS)`) naturally yields
+ * the Snapshot's own content unmodified, since every real event's `ts` is a
  * `Date.now()` value and therefore always greater than `-Infinity`. This
- * lets the initial state be selected from the History list exactly like
- * any other rewind target, without any special-casing in the pure
- * log/status functions above.
+ * lets the Snapshot be selected from the History list exactly like any
+ * other rewind target, without any special-casing in the pure
+ * state/status functions below.
  */
-export const INITIAL_CURSOR_TS = Number.NEGATIVE_INFINITY;
+export const SNAPSHOT_CURSOR_TS = Number.NEGATIVE_INFINITY;
 
-/** Reads the raw event log from localStorage. Returns [] if absent/corrupt. */
-export function loadLog() {
+/**
+ * Reads the persisted `{snapshot, log}` state from localStorage. Returns
+ * `{snapshot: {}, log: []}` if absent/corrupt. Transparently migrates a
+ * legacy `v1` bare event-log array (if present, and no `v2` state exists
+ * yet) into `{snapshot: {}, log: legacyLog}` — the old key is left in
+ * place (harmless orphan) rather than actively deleted.
+ * @returns {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}}
+ */
+export function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && Array.isArray(parsed.log)) {
+        const snapshot = parsed.snapshot && typeof parsed.snapshot === "object" ? parsed.snapshot : {};
+        return { snapshot, log: parsed.log };
+      }
+    }
   } catch {
-    return [];
+    // fall through to legacy migration / empty state
+  }
+  try {
+    const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacyRaw) {
+      const legacyParsed = JSON.parse(legacyRaw);
+      if (Array.isArray(legacyParsed)) {
+        return { snapshot: {}, log: legacyParsed };
+      }
+    }
+  } catch {
+    // fall through to empty state
+  }
+  return { snapshot: {}, log: [] };
+}
+
+/**
+ * Persists a `{snapshot, log}` state object to localStorage.
+ * @param {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}} state
+ * @returns {boolean} whether the write succeeded.
+ */
+export function saveState(state) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    return true;
+  } catch {
+    return false;
   }
 }
 
 /**
- * Appends a new `{id, status, ts}` event and attempts to persist the
- * updated log to localStorage.
- * @param {{id: string, status: string, ts: number}[]} log
+ * Appends a new `{id, status, ts}` event to `state.log` and attempts to
+ * persist the updated state to localStorage. `state.snapshot` passes
+ * through unchanged.
+ * @param {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}} state
  * @param {string} id
  * @param {string} status
- * @returns {{log: {id: string, status: string, ts: number}[], ok: boolean, error?: unknown}}
- *   the updated (in-memory) log, and whether the write to localStorage
+ * @returns {{state: {snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}, ok: boolean, error?: unknown}}
+ *   the updated (in-memory) state, and whether the write to localStorage
  *   succeeded. On failure (e.g. a QuotaExceededError), the event is still
- *   included in the returned `log` so the current page can reflect it
+ *   included in the returned `state` so the current page can reflect it
  *   immediately, but it will not survive a reload (REQ-EXPLORE-002).
  */
-export function appendEvent(log, id, status) {
-  const nextLog = [...log, { id, status, ts: Date.now() }];
+export function appendEvent(state, id, status) {
+  const nextState = { snapshot: state.snapshot, log: [...state.log, { id, status, ts: Date.now() }] };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextLog));
-    return { log: nextLog, ok: true };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+    return { state: nextState, ok: true };
   } catch (error) {
-    return { log: nextLog, ok: false, error };
+    return { state: nextState, ok: false, error };
   }
 }
 
 /**
- * Folds the event log up to (and including) `cursorTs` into a Map of
- * id -> status. Events are assumed to already be in chronological order
- * (as produced by `appendEvent`); events with a later `ts` than `cursorTs`
- * are ignored, which is what makes rewinding possible.
- * @param {{id: string, status: string, ts: number}[]} log
+ * Folds `state.snapshot` plus `state.log` up to (and including) `cursorTs`
+ * into a Map of id -> status: the Snapshot seeds the result, then log
+ * events (assumed already in chronological order, as produced by
+ * `appendEvent`) with a later `ts` than `cursorTs` are ignored, and any
+ * remaining ones override the Snapshot's entry for the same id — which is
+ * what makes rewinding possible.
+ * @param {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}} state
  * @param {number} [cursorTs] defaults to Infinity (i.e. "now"/live).
  * @returns {Map<string, string>}
  */
-export function computeStatusAsOf(log, cursorTs = Infinity) {
-  const statusById = new Map();
-  for (const event of log) {
+export function computeStatusAsOf(state, cursorTs = Infinity) {
+  const statusById = new Map(Object.entries(state.snapshot));
+  for (const event of state.log) {
     if (event.ts > cursorTs) continue;
     statusById.set(event.id, event.status);
   }
@@ -137,32 +183,24 @@ export function resetLogAt(log, cursorTs) {
 }
 
 /**
- * "Prune until here" (ADR-0014): removes, from the range `(-∞, cursorTs]`,
- * any per-id event history that nets out to no change from the implicit
- * default ("unread", i.e. absent from the log) — a "read"→"unread"
- * round-trip within that range annihilates entirely. IDs whose net status
- * within the range is "read" keep only their single last qualifying event;
- * all earlier events for that id within the range are dropped. Events
- * after `cursorTs` are untouched. Also a one-way, destructive rewrite; see
+ * "Squash until here" (ADR-0014): folds every event in the range
+ * `(-∞, cursorTs]` into the Snapshot — computing the resulting id->status
+ * map as of `cursorTs` (which already accounts for the existing Snapshot,
+ * see `computeStatusAsOf()`) and replacing `state.snapshot` with it — then
+ * removes all of those events from the log (`event.ts > cursorTs` is kept
+ * untouched). Net status is preserved; only the individual events up to
+ * the cursor are compacted away. Also a one-way, destructive rewrite; see
  * `resetLogAt()`'s doc comment for the same caveat.
- * @param {{id: string, status: string, ts: number}[]} log
+ * @param {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}} state
  * @param {number} cursorTs
- * @returns {{id: string, status: string, ts: number}[]}
+ * @returns {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}}
  */
-export function pruneLogUntil(log, cursorTs) {
-  const lastEventByIdInWindow = new Map();
-  for (const event of log) {
-    if (event.ts > cursorTs) continue;
-    lastEventByIdInWindow.set(event.id, event);
-  }
-  const kept = log.filter((event) => event.ts > cursorTs);
-  for (const lastEvent of lastEventByIdInWindow.values()) {
-    if (lastEvent.status === "read") {
-      kept.push(lastEvent);
-    }
-  }
-  kept.sort((a, b) => a.ts - b.ts);
-  return kept;
+export function squashStateUntil(state, cursorTs) {
+  const folded = computeStatusAsOf(state, cursorTs);
+  return {
+    snapshot: Object.fromEntries(folded),
+    log: state.log.filter((event) => event.ts > cursorTs),
+  };
 }
 
 /**
@@ -195,7 +233,7 @@ const EXPLORATION_CHANGED_EVENT = "enastro:exploration-changed";
  * @returns {Map<string, string>}
  */
 export function getStatusSnapshot(cursorTs) {
-  return computeStatusAsOf(loadLog(), cursorTs);
+  return computeStatusAsOf(loadState(), cursorTs);
 }
 
 function dispatchChanged(statusById, cursorTs) {
@@ -207,7 +245,7 @@ function formatEventTime(ts, offsetMinutes) {
 }
 
 function main() {
-  let log = loadLog();
+  let state = loadState();
   // `null` means "live" (cursor = now); any other value is an explicit
   // past timestamp the user rewound to (REQ-EXPLORE-003).
   let cursorTs = null;
@@ -228,7 +266,7 @@ function main() {
   const historyList = document.getElementById("exploration-history-list");
   const returnToNowButton = document.getElementById("exploration-return-to-now");
   const resetHereButton = document.getElementById("exploration-reset-here");
-  const pruneHereButton = document.getElementById("exploration-prune-here");
+  const squashHereButton = document.getElementById("exploration-squash-here");
   const warning = document.getElementById("exploration-storage-warning");
   const missingNotice = document.getElementById("exploration-missing-notice");
   const autoUnreadNotice = document.getElementById("exploration-auto-unread-notice");
@@ -310,21 +348,16 @@ function main() {
     return !!panel && !panel.hidden;
   }
 
-  /** Persists `nextLog` directly (bypassing `appendEvent`), for the
-   * destructive Reset/Prune operations which replace the whole log rather
-   * than appending a single event. */
-  function persistLog(nextLog) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextLog));
-      return true;
-    } catch {
-      return false;
-    }
+  /** Persists `nextState` directly (bypassing `appendEvent`), for the
+   * destructive Reset/Squash operations which replace the whole state
+   * rather than appending a single event. */
+  function persistState(nextState) {
+    return saveState(nextState);
   }
 
   /**
    * Builds one history-list row's markup: a leading verb icon (Read =
-   * muted eye, Unread = nebula-colored dot, Initial state = accent-dim
+   * muted eye, Unread = nebula-colored dot, Snapshot = accent-dim
    * star — REQ-UX / history-drawer mock), the verb label, and — for real
    * events only — the note id (ellipsized via CSS if too long) and a
    * right-aligned timestamp. Monospace is reserved for the id/timestamp;
@@ -360,7 +393,7 @@ function main() {
   function renderHistoryList() {
     if (!historyList) return;
     historyList.replaceChildren();
-    for (const event of [...log].reverse()) {
+    for (const event of [...state.log].reverse()) {
       const item = document.createElement("li");
       const button = document.createElement("button");
       button.type = "button";
@@ -390,25 +423,25 @@ function main() {
       historyList.appendChild(item);
     }
 
-    // Synthetic entry for the "initial state" (before any event was ever
-    // recorded, i.e. every note unread) — always shown at the very end of
-    // the list (the oldest point in history), so it stays selectable even
-    // once real events exist, and even when the log is empty.
-    const initialItem = document.createElement("li");
-    const initialButton = document.createElement("button");
-    initialButton.type = "button";
-    initialButton.append(buildHistoryRow("initial", "Initial state"));
-    const isInitialActive = cursorTs === INITIAL_CURSOR_TS;
-    initialButton.classList.toggle("active", isInitialActive);
-    if (isInitialActive) {
-      initialButton.setAttribute("aria-current", "true");
+    // Synthetic entry for the Snapshot (the persisted base state before any
+    // remaining log event) — always shown at the very end of the list (the
+    // oldest point in history), so it stays selectable even once real
+    // events exist, and even when the log is empty.
+    const snapshotItem = document.createElement("li");
+    const snapshotButton = document.createElement("button");
+    snapshotButton.type = "button";
+    snapshotButton.append(buildHistoryRow("snapshot", "Snapshot"));
+    const isSnapshotActive = cursorTs === SNAPSHOT_CURSOR_TS;
+    snapshotButton.classList.toggle("active", isSnapshotActive);
+    if (isSnapshotActive) {
+      snapshotButton.setAttribute("aria-current", "true");
     }
-    initialButton.addEventListener("click", () => {
-      cursorTs = INITIAL_CURSOR_TS;
+    snapshotButton.addEventListener("click", () => {
+      cursorTs = SNAPSHOT_CURSOR_TS;
       update();
     });
-    initialItem.appendChild(initialButton);
-    historyList.appendChild(initialItem);
+    snapshotItem.appendChild(snapshotButton);
+    historyList.appendChild(snapshotItem);
   }
 
   function applyToNoteList(statusById) {
@@ -437,7 +470,7 @@ function main() {
     // read/unread state on note pages, so its presence/absence doubles as
     // the at-a-glance read/unread cue (no separate button styling needed).
     if (readAtSpan) {
-      const readAt = isRead ? getLastEventTimestamp(log, id, currentCursor()) : undefined;
+      const readAt = isRead ? getLastEventTimestamp(state.log, id, currentCursor()) : undefined;
       if (readAt !== undefined) {
         if (readAtValue) readAtValue.textContent = formatLocalDateOnly(readAt, offsetMinutes);
         readAtSpan.hidden = false;
@@ -450,18 +483,18 @@ function main() {
   }
 
   function update() {
-    const statusById = computeStatusAsOf(log, currentCursor());
+    const statusById = computeStatusAsOf(state, currentCursor());
     applyToNoteList(statusById);
     applyToMarkReadButton(statusById);
     // Return is always enabled (returning to "now" is safe/idempotent even
-    // while already live); Prune/Reset require an actual rewound cursor to
+    // while already live); Squash/Reset require an actual rewound cursor to
     // act on, so they stay disabled (rather than hidden) until one is
     // selected.
     if (resetHereButton) {
       resetHereButton.disabled = cursorTs === null;
     }
-    if (pruneHereButton) {
-      pruneHereButton.disabled = cursorTs === null;
+    if (squashHereButton) {
+      squashHereButton.disabled = cursorTs === null;
     }
     renderHistoryList();
     dispatchChanged(statusById, currentCursor());
@@ -504,19 +537,26 @@ function main() {
     ) {
       return;
     }
-    log = resetLogAt(log, cursorTs);
-    if (!persistLog(log)) {
+    state = { snapshot: state.snapshot, log: resetLogAt(state.log, cursorTs) };
+    if (!persistState(state)) {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }
     cursorTs = null;
     update();
   });
 
-  pruneHereButton?.addEventListener("click", () => {
+  squashHereButton?.addEventListener("click", () => {
     if (cursorTs === null) return;
-    if (!confirm("This permanently removes no-op read/unread history up to this point. Continue?")) return;
-    log = pruneLogUntil(log, cursorTs);
-    if (!persistLog(log)) {
+    if (
+      !confirm(
+        "This folds all read/unread history up to this point into the Snapshot, permanently " +
+          "removing the individual events (their net effect is preserved). Continue?",
+      )
+    ) {
+      return;
+    }
+    state = squashStateUntil(state, cursorTs);
+    if (!persistState(state)) {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }
     cursorTs = null;
@@ -538,10 +578,10 @@ function main() {
   markReadButton?.addEventListener("click", () => {
     if (cursorTs !== null) return; // read-only while rewound
     const id = markReadButton.dataset.markRead;
-    const statusById = computeStatusAsOf(log, currentCursor());
+    const statusById = computeStatusAsOf(state, currentCursor());
     const nextStatus = statusById.get(id) === "read" ? "unread" : "read";
-    const result = appendEvent(log, id, nextStatus);
-    log = result.log;
+    const result = appendEvent(state, id, nextStatus);
+    state = result.state;
     if (!result.ok) {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }
@@ -586,7 +626,7 @@ function main() {
     // Each notice is independently shown/dismissed, and lists the actual
     // note ids (rather than just a count) since the box is dismissed with
     // a single click anyway — the id is more useful than a bare number.
-    const loggedIds = new Set(log.map((event) => event.id));
+    const loggedIds = new Set(state.log.map((event) => event.id));
     const missingIds = [...loggedIds].filter((id) => !modifiedAtById.has(id));
     if (missingIds.length > 0 && missingNotice) {
       const textEl = missingNotice.querySelector("[data-text]");
@@ -595,15 +635,15 @@ function main() {
     }
 
     const autoUnreadIds = [];
-    const statusById = computeStatusAsOf(log, Infinity);
+    const statusById = computeStatusAsOf(state, Infinity);
     for (const [id, status] of statusById) {
       if (status !== "read") continue;
       const modifiedAtMs = modifiedAtById.get(id);
       if (modifiedAtMs === undefined) continue;
-      const readTs = getLastEventTimestamp(log, id, Infinity);
+      const readTs = getLastEventTimestamp(state.log, id, Infinity);
       if (readTs !== undefined && modifiedAtMs > readTs) {
-        const result = appendEvent(log, id, "unread");
-        log = result.log;
+        const result = appendEvent(state, id, "unread");
+        state = result.state;
         autoUnreadIds.push(id);
       }
     }

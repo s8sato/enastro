@@ -161,7 +161,7 @@ minimal Markdown vault
 | REQ-EXPLORE-005 | 既読ノートについて、一覧ページのビュレット、グラフ UI 上の当該ノード、当該ノードを起点とするエネルギー粒子が減光・無彩色化して表示される **MUST**。 | DECIDED |
 | REQ-EXPLORE-006 | 探索ステータスはいかなるビルド成果物（`graph.json`, `search-index.json`, 生成 HTML）にも一切書き込まれない **MUST**（[08-security-and-privacy.md](08-security-and-privacy.md) の privacy invariant と整合）。 | DECIDED |
 | REQ-EXPLORE-007 | サイト読み込み時、探索ログに登場するノート ID が現在の公開ノート一覧（`search-index.json`）に存在しない場合、閲覧者に通知する **SHOULD**。また、既読状態のノートについて、その既読イベントの記録時刻より当該ノートの最終更新日時（`search-index.json` の `modifiedAt`。その情報源は REQ-UX-007、[ADR-0015](../decisions/ADR-0015-note-modified-at-source.md)）が新しい場合、自動的に未読イベントを追記し、その旨を通知する **SHOULD**。この2つの通知は原因が異なるため独立した別々の枠に表示し、件数ではなく対象ノート ID を列挙する **SHOULD**。いずれもフェッチ失敗時（オフライン等）は同期機能のみを黙ってスキップし、他の探索ステータス機能に影響しない **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂）。 | DECIDED |
-| REQ-EXPLORE-008 | 閲覧者は rewind 中のカーソル位置を対象に、次の2つの明示的・破壊的操作を実行できる **MAY**: (a) "Reset to here" — カーソル時点以前（`ts <= T`）の履歴は保持したまま、カーソル時点より後（`ts > T`）の履歴を永続的に削除する（`git reset --hard` 相当。履歴の集約・書き換えは行わない）。(b) "Prune until here" — カーソル時点までの範囲で正味の変化がない read/unread の往復を削除する。いずれも実行前に確認を要求し、rewind 自体（閲覧専用、REQ-EXPLORE-003）とは明確に区別される **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂）。 | DECIDED |
+| REQ-EXPLORE-008 | 閲覧者は rewind 中のカーソル位置を対象に、次の2つの明示的・破壊的操作を実行できる **MAY**: (a) "Reset to here" — カーソル時点以前（`ts <= T`）の履歴は保持したまま、カーソル時点より後（`ts > T`）の履歴を永続的に削除する（`git reset --hard` 相当。履歴の集約・書き換えは行わない）。(b) "Squash until here" — カーソル時点までの範囲の履歴（イベントログ）すべてを、正味の効果を保持したまま永続化された Snapshot に畳み込み、個々のイベントをログから削除する。いずれも実行前に確認を要求し、rewind 自体（閲覧専用、REQ-EXPLORE-003）とは明確に区別される **MUST**（[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md) 改訂）。 | DECIDED |
 
 ## 5. Traceability 表
 
@@ -213,7 +213,7 @@ minimal Markdown vault
 | 02: 探索ステータスのスタイル反映 | REQ-EXPLORE-005 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 02: 公開 artifact への非漏洩 | REQ-EXPLORE-006, REQ-SEC-001 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 02: ID不一致通知・自動unread同期 | REQ-EXPLORE-007 | ADR-0014, ADR-0015 | 09 §2.6 | fixtures/basic-vault |
-| 02: Reset to here / Prune until here | REQ-EXPLORE-008 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
+| 02: Reset to here / Squash until here | REQ-EXPLORE-008 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 03: 12色テーマ切り替え | REQ-UX-011 | (render/client 実装、ADR-0014 の localStorage 完結パターンを踏襲) | 09 §2.6 | fixtures/basic-vault |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
