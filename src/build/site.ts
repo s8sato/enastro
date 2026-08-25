@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,6 +40,16 @@ const require = createRequire(import.meta.url);
 const PIXI_PACKAGE_ROOT = path.dirname(path.dirname(require.resolve("pixi.js")));
 const PIXI_VENDOR_SOURCE_PATH = path.join(PIXI_PACKAGE_ROOT, "dist", "pixi.min.mjs");
 const PIXI_VENDOR_FILENAME = "pixi.min.mjs";
+
+// katex (server-side math rendering, ADR-0017) ships only its rendering
+// library as an importable module; its stylesheet + webfonts (needed for
+// correct glyph shapes/positioning in the browser) are plain static files
+// under its `dist/` directory, vendored the same way as pixi.js above. The
+// stylesheet's `url(fonts/...)` references are relative, so `fonts/` must
+// be copied alongside `katex.min.css` under the same `assets/katex/` dir.
+const KATEX_PACKAGE_ROOT = path.dirname(path.dirname(require.resolve("katex")));
+const KATEX_CSS_SOURCE_PATH = path.join(KATEX_PACKAGE_ROOT, "dist", "katex.min.css");
+const KATEX_FONTS_SOURCE_DIR = path.join(KATEX_PACKAGE_ROOT, "dist", "fonts");
 
 export interface BuildSiteResult {
   /** Human-readable warnings (e.g. edges dropped because the target was
@@ -91,6 +101,10 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
     copyFileSync(path.join(CLIENT_ASSETS_DIR, filename), path.join(outDir, "assets", filename));
   }
   copyFileSync(PIXI_VENDOR_SOURCE_PATH, path.join(outDir, "assets", PIXI_VENDOR_FILENAME));
+
+  mkdirSync(path.join(outDir, "assets", "katex"), { recursive: true });
+  copyFileSync(KATEX_CSS_SOURCE_PATH, path.join(outDir, "assets", "katex", "katex.min.css"));
+  cpSync(KATEX_FONTS_SOURCE_DIR, path.join(outDir, "assets", "katex", "fonts"), { recursive: true });
 
   for (const attachmentId of [...publishedAttachmentIds].sort()) {
     const attachment = attachmentById.get(attachmentId)!;

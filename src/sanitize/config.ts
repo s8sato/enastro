@@ -8,6 +8,14 @@ import type { IOptions } from "sanitize-html";
  * stripped, per the allowlist approach recommended in
  * spec/08-security-and-privacy.md §3 (OWASP-aligned; avoids a
  * regex-based denylist).
+ *
+ * Note: KaTeX-rendered math (REQ-CONTENT-010, ADR-0017) does NOT go through
+ * this allowlist at all — its many internal CSS classes/inline styles are
+ * intentionally NOT added here (would be a brittle, katex-version-fragile
+ * maintenance burden). Instead `src/render/math.ts` stashes the trusted
+ * KaTeX HTML behind a placeholder token that `render-note.ts` substitutes
+ * back in AFTER this sanitizer runs. See ADR-0017 for the full rationale;
+ * do not "fix" missing math styling by adding katex classes/`style` here.
  */
 export const SANITIZE_OPTIONS: IOptions = {
   allowedTags: [

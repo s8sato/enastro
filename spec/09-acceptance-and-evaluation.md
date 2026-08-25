@@ -29,6 +29,7 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 | REQ-CONTENT-006 | unit test（衝突ケースの挙動が仕様通りであること）※規則自体は OPEN | basic-vault |
 | REQ-CONTENT-007 | unit test（broken link で build が失敗しないこと） | basic-vault |
 | REQ-CONTENT-008 | unit test + golden test（日本語ファイル名の解決） | compatibility-vault |
+| REQ-CONTENT-010 | unit test（inline/block 数式のレンダリング、コードスパン非干渉、不正 LaTeX のフォールバック、trust:false の安全性） | demo-vault (markdown-showcase.md) |
 | REQ-GRAPH-002, 003 | unit test（edge/backlink の生成） | basic-vault |
 
 ### 2.2 privacy / security

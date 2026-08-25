@@ -233,6 +233,7 @@ Personal Access Token の管理が必要になります。この private → pub
 
 - Markdown frontmatter（`publish`, タグ相当のフィールド）の解釈
 - wikilink `[[note]]` / alias 付き `[[note|alias]]` / embed `![[note]]` / `#tag` の解釈
+- inline `$...$` / block `$$...$$` 数式の KaTeX レンダリング
 - 非公開ノートへの参照を安全に除去した public projection の生成
 - 添付ファイルは allowlist マークがある場合のみ公開
 - 決定的（deterministic）な静的 artifact の生成(同一入力 → 同一 content-hash)

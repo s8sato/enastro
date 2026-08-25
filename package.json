@@ -20,7 +20,6 @@
   },
   "devDependencies": {
     "@types/d3-force": "^3.0.10",
-    "@types/markdown-it": "^14.2.0",
     "@types/node": "^26.2.0",
     "@types/sanitize-html": "^2.16.1",
     "playwright": "^1.62.1",
@@ -30,6 +29,7 @@
   "dependencies": {
     "d3-force": "^3.0.0",
     "highlight.js": "^11.12.0",
+    "katex": "^0.18.4",
     "markdown-it": "^15.0.0",
     "pixi.js": "^8.20.0",
     "sanitize-html": "^2.17.7",

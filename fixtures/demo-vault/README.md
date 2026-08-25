@@ -19,6 +19,8 @@ CI 経由で GitHub Pages に自動公開する enastro 自身のデモサイト
   デモサイト上でも実演する。
 - `graph-view.md` は存在しないノート `[[future-ideas]]` への broken link を含み、
   broken link の非致命化（REQ-CONTENT-007）を実演する。
+- `markdown-showcase.md` は inline `$...$` / block `$$...$$` の数式（KaTeX）レンダリング
+  （REQ-CONTENT-010、[ADR-0017](../../decisions/ADR-0017-math-rendering.md)）を実演する。
 
 ## 検証方法
 

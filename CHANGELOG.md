@@ -7,6 +7,12 @@
 
 ### 追加
 
+- **数式（KaTeX）レンダリング**: ノート本文中の inline `$...$` / block `$$...$$` 数式を、
+  ビルド時に KaTeX でサーバーサイドレンダリングして静的 HTML に埋め込む。コードブロック・
+  インラインコード中の `$` には反応しない。不正な LaTeX は build を失敗させず、KaTeX 自身の
+  エラー表示にフォールバックする（REQ-CONTENT-010、
+  [ADR-0017](decisions/ADR-0017-math-rendering.md)）。
+
 - **vault 単位のビルド時サイトデフォルト**: `enastro.config.json` に `siteTitle` / `defaultTheme` /
   `defaultParticleDirection` を追加。`siteTitle`（既定値 `"Notes"`）は `index.html` の
   `<title>`/`<h1>` と `graph.html` の `<title>` に反映される。`defaultTheme`（既定値 `"moon"`）・

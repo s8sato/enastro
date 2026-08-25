@@ -2,6 +2,7 @@ import MarkdownIt from "markdown-it";
 import hljs from "highlight.js";
 import type { KnowledgeGraph } from "../graph/types.js";
 import { sanitizeHtml } from "../sanitize/index.js";
+import { installMathRenderer, substituteMathFragments, type MathRenderEnv } from "./math.js";
 import { substituteInlineTags } from "./substitute-tags.js";
 import { substituteLinks, type SubstituteLinksOptions } from "./substitute-links.js";
 
@@ -29,6 +30,11 @@ const markdown: InstanceType<typeof MarkdownIt> = new MarkdownIt({
   },
 });
 
+// Math (KaTeX) rendering, REQ-CONTENT-010 / ADR-0017 — see math.ts for the
+// full rationale (server-side, and deliberately bypassing sanitizeHtml's
+// allowlist via a placeholder substituted back in below).
+installMathRenderer(markdown);
+
 export interface RenderNoteBodyResult {
   html: string;
   removedTargets: string[];
@@ -42,6 +48,8 @@ export function renderNoteBody(
 ): RenderNoteBodyResult {
   const withTagLinks = substituteInlineTags(body);
   const { text, removedTargets } = substituteLinks(withTagLinks, graph, options);
-  const html = sanitizeHtml(markdown.render(text));
+  const env: MathRenderEnv = {};
+  const sanitized = sanitizeHtml(markdown.render(text, env));
+  const html = substituteMathFragments(sanitized, env);
   return { html, removedTargets };
 }

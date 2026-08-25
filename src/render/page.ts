@@ -201,6 +201,7 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(node.title)}</title>
 <link rel="stylesheet" href="../assets/site.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
 ${themeFoucScript(siteConfig.defaultTheme)}
 </head>
 <body>

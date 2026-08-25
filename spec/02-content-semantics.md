@@ -18,7 +18,22 @@ v0.1 では以下の最小セットのみをパーサーが解釈する（REQ-CO
 - ブロック参照 (`[[note#^blockid]]`)
 - Dataview 風クエリ
 - Canvas
-- Footnote, table, math (KaTeX) 等の拡張構文の特別処理
+- Footnote, table 等の拡張構文の特別処理
+
+math (KaTeX) は上記の DEFERRED 対象から除外され、REQ-CONTENT-010（1.1節）として対応する。
+
+## 1.1 数式（math）構文 [DECIDED]
+
+- `$...$`（インライン数式）および `$$...$$`（ブロック数式）を KaTeX として解釈し、
+  ビルド時（server-side）にレンダリングする **MUST**（REQ-CONTENT-010、
+  [ADR-0017](../decisions/ADR-0017-math-rendering.md)）。
+- `\(...\)`/`\[...\]` 記法は非対応（DEFERRED）。
+- コードフェンス・インラインコード中の `$` は数式として解釈しない（markdown-it の
+  ルール優先順位により、コードスパン/フェンスが先に消費されるため自然に達成される）。
+- 不正な LaTeX はビルドを失敗させず、KaTeX 自身のエラー表示（該当箇所の強調表示）に
+  フォールバックする **MUST**。
+- レンダリング結果は sanitize-html の allowlist を経由しない（KaTeX の `trust: false`
+  を信頼境界とするプレースホルダー方式、ADR-0017 参照）。
 
 ## 2. Wikilink 解決規則
 
