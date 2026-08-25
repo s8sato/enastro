@@ -11,7 +11,12 @@
   "bin": {
     "enastro": "bin/enastro.mjs"
   },
+  "files": [
+    "bin",
+    "dist-ts"
+  ],
   "scripts": {
+    "prepare": "npm run build",
     "build": "tsc && node scripts/copy-client-assets.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

@@ -114,6 +114,9 @@ GitHub Pages へ公開したい場合の手順です。**vault リポジトリ�
 `.github/workflows/deploy.yml` としてコピー&ペーストしてください
 （[ADR-0013](decisions/ADR-0013-ci-github-pages-pipeline-scope.md)）。
 
+（`npx github:s8sato/enastro` という書き方は、enastro が npm registry には公開されていないパッケージ
+だからです。GitHub リポジトリを直接指定してインストールします。）
+
 ```yaml
 name: Deploy my vault to GitHub Pages
 
@@ -144,7 +147,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-      - run: npx enastro ./my-vault ./dist
+      - run: npx github:s8sato/enastro ./my-vault ./dist
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
@@ -202,7 +205,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-      - run: npx enastro ./my-vault ./dist
+      - run: npx github:s8sato/enastro ./my-vault ./dist
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: <your-github-user>/my-notes-site

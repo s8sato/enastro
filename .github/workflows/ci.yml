@@ -33,3 +33,34 @@ jobs:
       - run: npm run typecheck
       - run: npx playwright install --with-deps chromium
       - run: npm test
+
+  # Reproduces the real end-user flow documented in README.md (Pattern A/B:
+  # `npx github:s8sato/enastro ...`), where enastro is installed as a
+  # packaged dependency rather than via `npm ci` in this repo's own
+  # checkout. `npm pack` applies the same "files" allowlist + `prepare`
+  # lifecycle that a git-based npm install goes through, so this catches
+  # cases where the published package is missing required build output
+  # (see incident: pattern-A user CI failure, 2026-08-26 — dist-ts/ was
+  # gitignored and excluded from the package, so the CLI failed at
+  # runtime with ERR_MODULE_NOT_FOUND).
+  package-install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Pack and install enastro into a scratch project
+        run: |
+          set -e
+          mkdir /tmp/enastro-tarball /tmp/package-install-smoke
+          npm pack --pack-destination /tmp/enastro-tarball
+          cd /tmp/package-install-smoke
+          npm init -y >/dev/null
+          npm install /tmp/enastro-tarball/enastro-*.tgz
+      - name: Run the installed CLI against a fixture vault
+        run: |
+          set -e
+          node /tmp/package-install-smoke/node_modules/.bin/enastro \
+            "${GITHUB_WORKSPACE}/fixtures/basic-vault" /tmp/package-install-smoke-out
+          test -f /tmp/package-install-smoke-out/index.html
