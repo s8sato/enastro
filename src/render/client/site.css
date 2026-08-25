@@ -209,12 +209,18 @@ nav a:hover {
 }
 
 /* Non-clickable "you are here" nav item (page.ts's `renderNavItem()`) for
-   the page kind matching the current page \u2014 rendered in the same slot a
+   the page kind matching the current page — rendered in the same slot a
    link would occupy so All notes/Graph view/HISTORY stay in the same
    position across all three page kinds, rather than shifting when a page
-   omits its own self-link. */
+   omits its own self-link. `filter: grayscale(1)` on top of `--fg-muted`
+   (rather than `--fg-muted` alone) because `--fg-muted` is
+   `color-mix(..., var(--nebula), ...)` (site.css's `:root` block) — it
+   still carries each theme's secondary hue, not a true neutral gray — so
+   it alone wouldn't read as clearly inert/non-interactive next to the
+   colored `nav a`/`nav a:hover` links either side of it. */
 nav [aria-current="page"] {
   color: var(--fg-muted);
+  filter: grayscale(1);
   cursor: default;
 }
 
