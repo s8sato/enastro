@@ -118,7 +118,7 @@ minimal Markdown vault
 | REQ-UX-009 | Graph UI ページ（`graph.html`）をノート一覧・ノートページから相互にリンクできる副画面として提供する **MUST**（[ADR-0011](../decisions/ADR-0011-graph-ui-placement.md)）。 | DECIDED |
 | REQ-UX-010 | 出力は PC・モバイル両方でレスポンシブなレイアウトを提供し、Graph UI は touch による pan/zoom 操作をサポートする **MUST**。WCAG 準拠等の包括的 accessibility 対応は対象外（引き続き DEFERRED）。 | DECIDED |
 | REQ-UX-011 | 出力は12種のカラーテーマをクライアント完結で切り替え可能とする **SHOULD**。テーマ選択は `localStorage` にのみ保存され、index/note/graph の3ページ間で一貫する。ビルドは特定テーマに依存しない(REQ-BUILD-001 と整合し、REQ-UX-004 のポータビリティを維持する)。既存の探索ステータス機能([ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md))と同様、client-only の `localStorage` 完結パターンを踏襲し、ビルド成果物には一切書き込まない。 | DECIDED |
-| REQ-UX-012 | Graph UI ページ（`graph.html`）は edge 上のエネルギー粒子の進行方向をトグルで切り替え可能とする **SHOULD**（[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md) が PROPOSED として残した粒子方向パラメータの具体化）。既定値は「dependency-first」（参照先＝依存先ノートから参照元＝依存元ノートへ、知識の積み上げ方向）とし、代替として wikilink の方向（`edge.source` → `edge.target`、REQ-GRAPH-002 の directed edge と一致）を選べる。設定は `localStorage` にのみ保存され、graph ページのみに閉じる（index/note ページには表示しない）。graph IR の `edge.source`/`edge.target`・backlink（REQ-GRAPH-002/003）はどちらの設定でも一切変更されない。REQ-EXPLORE-005 の「探索済みノートの発射粒子を減光する」判定は、その時点で選択中の方向における実際の粒子発射元ノードに追従する。 | PROPOSED |
+| REQ-UX-012 | Graph UI ページ（`graph.html`）は edge 上のエネルギー粒子の進行方向をトグルで切り替え可能とする **SHOULD**（[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md) が PROPOSED として残した粒子方向パラメータの具体化）。既定値は「dependency-first」（参照先＝依存先ノートから参照元＝依存元ノートへ、知識の積み上げ方向）とし、代替として wikilink の方向（`edge.source` → `edge.target`、REQ-GRAPH-002 の directed edge と一致）を選べる。設定は `localStorage` にのみ保存され、graph ページのみに閉じる（index/note ページには表示しない）。graph IR の `edge.source`/`edge.target`・backlink（REQ-GRAPH-002/003）はどちらの設定でも一切変更されない。REQ-EXPLORE-005 の「探索済みノートの発射粒子を減光する」判定は、その時点で選択中の方向における実際の粒子発射元ノードに追従する。 | DECIDED |
 
 ### 4.5 SEC
 
@@ -217,6 +217,7 @@ minimal Markdown vault
 | 02: Reset to here / Squash until here | REQ-EXPLORE-008 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 02: カーソル位置永続化・ボタン活性条件再定義 | REQ-EXPLORE-009 | ADR-0014 | 09 §2.6 | fixtures/basic-vault |
 | 03: 12色テーマ切り替え | REQ-UX-011 | (render/client 実装、ADR-0014 の localStorage 完結パターンを踏襲) | 09 §2.6 | fixtures/basic-vault |
+| 03: エネルギー粒子の進行方向トグル | REQ-UX-012 | ADR-0010（PROPOSED パラメータの具体化） | 09 §2.6 | fixtures/demo-vault, fixtures/benchmark-vault |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
 本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。

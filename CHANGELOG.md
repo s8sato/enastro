@@ -3,7 +3,44 @@
 本プロジェクトのバージョンは [Semantic Versioning](https://semver.org/lang/ja/) に準拠する。
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) を参考にする。
 
+## [0.3.1] - 2026-08-25
+
+v0.3.0 の探索ステータス(History)機能・テーマ切り替え機能を仕上げる修正・改善リリース。
+
+### 追加
+
+- **エネルギー粒子の進行方向トグル**: Graph UI に、edge 上のエネルギー粒子の進行方向を
+  切り替えるトグルを追加。既定値は「dependency-first」(参照先の依存先ノートから参照元の
+  依存元ノートへ、知識の積み上げ方向)とし、代替として wikilink の方向を選べる。設定は
+  `localStorage` にのみ保存され graph ページに閉じ、graph IR の `edge.source`/`edge.target`・
+  backlink は一切変更されない(REQ-UX-012、[ADR-0010](decisions/ADR-0010-graph-ui-rendering-strategy.md)
+  が PROPOSED として残していたパラメータを具体化し DECIDED とした)。
+
+- **History パネルの刷新**: rewind 用の History UI を、ヘッダー右端トリガー付きの
+  透過ドロワーに刷新。イベントログは新しい記録が上に来る順序で表示し、末尾に常設の
+  "Initial state" / Snapshot 行を置く。破壊的操作は "Return to now"(最軽量)・
+  "Squash until here"(不可逆だが無駄を畳み込むだけ)・"Reset to here"(不可逆で重い)の順に並べ、
+  実行前に確認を要求する(REQ-EXPLORE-003/008)。
+
+- **Snapshot 概念の導入**: "Prune until here" を "Squash until here" に改め、カーソル時点までの
+  イベントログを正味の効果を保持したまま永続化された Snapshot に畳み込む方式に変更。Snapshot は
+  更新時刻を持ち、History リスト上で他のイベント行と同じ書式で表示される(REQ-EXPLORE-008)。
+
+- **History カーソル位置の永続化**: rewind 中のカーソル位置および History ドロワーの開閉状態を
+  `localStorage` に永続化し、ページ遷移・リロードをまたいで保持する擬似 SPA 化。「now」を
+  「イベントログのうち最新のもの」として明確に定義し直し、ボタンの活性条件(カーソルが now の
+  とき Return/Reset を非活性、Snapshot のとき Squash を非活性)を再定義した(REQ-EXPLORE-009)。
+
+### 修正
+
+- History ドロワーの操作性・可読性を改善(背景透過度、ボタンの待機状態表示、カーソル位置の表示)。
+- Flow(粒子方向)ボタンを右下固定配置にし、トグル時にボタン幅が変化しないよう修正。
+- Graph view の History ドロワー位置を、タグフィルタの高さに関わらず All Notes/note ページと
+  一致するよう修正(`<nav>` の下端のみを基準とする)。
+- `getStatusSnapshot` が永続化されたカーソル位置を正しく解決するよう修正。
+
 ## [0.3.0] - 2026-08-25
+
 
 v0.2.0 以降にリリースされた v0.2.1・v0.2.2 の内容(Graph UI の細部改善・グラフ画面でのタグ
 フィルタリング)を統合し、新たに探索ステータス(既読/未読・History・rewind)機能と12色
