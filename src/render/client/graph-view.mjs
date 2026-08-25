@@ -1,11 +1,14 @@
 /**
- * Graph UI (REQ-GRAPH-004/005, REQ-UX-009/010, ADR-0010, ADR-0011): renders
- * `graph.json` as a starfield of nodes ("stars") connected by edges, with a
- * small animated "energy particle" travelling along each edge in its
- * (wikilink/embed) direction. Runs directly in the browser as an ES module;
- * no bundler/build step needed — pixi.js is vendored as a single
- * self-contained ESM bundle (`pixi.min.mjs`, copied from the `pixi.js` npm
- * package at build time, see `src/build/site.ts`).
+ * Graph UI (REQ-GRAPH-004/005, REQ-UX-009/010/012, ADR-0010, ADR-0011):
+ * renders `graph.json` as a starfield of nodes ("stars") connected by
+ * edges, with a small animated "energy particle" travelling along each
+ * edge. The particle's travel direction is user-configurable (REQ-UX-012,
+ * `particle-direction.mjs`) via a graph-page-only toggle, defaulting to
+ * "dependency-first" (referenced note \u2192 referencing note) rather than
+ * the literal wikilink/embed direction. Runs directly in the browser as an
+ * ES module; no bundler/build step needed — pixi.js is vendored as a
+ * single self-contained ESM bundle (`pixi.min.mjs`, copied from the
+ * `pixi.js` npm package at build time, see `src/build/site.ts`).
  *
  * Node/edge layout (x/y) is precomputed at build time (ADR-0006/0010/0012)
  * via a deterministic force simulation over the public projection only; this
@@ -20,6 +23,7 @@
 import * as PIXI from "./pixi.min.mjs";
 import { filterEntries } from "./filter.mjs";
 import { getStatusSnapshot } from "./exploration.mjs";
+import { DEFAULT_DIRECTION, readStoredDirection, resolveParticleEndpoints, storeDirection } from "./particle-direction.mjs";
 
 // Color palette mirrors site.css's design tokens (`--accent`, `--nebula`,
 // `--border`, `--fg`) so the Graph UI feels visually continuous with the
@@ -193,18 +197,26 @@ async function main() {
   const highlightEdgesLayer = new PIXI.Graphics();
   world.addChild(highlightEdgesLayer);
 
-  // One energy particle per edge, animated from source -> target (the
-  // wikilink/embed direction). All particles share a single global clock
-  // (rather than each looping independently on its own, previously
-  // randomized, phase) so every edge fires its particle in sync — the
-  // whole graph "pulses" together instead of looking like scattered,
-  // independent traffic.
+  // One energy particle per edge, animated along the direction chosen by
+  // the user via the particle-direction toggle (REQ-UX-012): by default
+  // ("dependency-first") from the *referenced* note (a dependency) toward
+  // the *referencing* note (its dependent) — matching the direction ideas
+  // are built up in — or, if switched to "wikilink", along the literal
+  // wikilink/embed direction (edge.source -> edge.target). Either way this
+  // is a render-only choice: `edge.source`/`edge.target` themselves, and
+  // everything derived from them (backlinks, REQ-GRAPH-002/003), are never
+  // touched. All particles share a single global clock (rather than each
+  // looping independently on its own, previously randomized, phase) so
+  // every edge fires its particle in sync — the whole graph "pulses"
+  // together instead of looking like scattered, independent traffic.
+  let particleDirection = readStoredDirection() ?? DEFAULT_DIRECTION;
   const particleLayer = new PIXI.Container();
   world.addChild(particleLayer);
   const particles = validEdges.map(({ source, target }) => {
     const dot = new PIXI.Graphics().circle(0, 0, 1.5).fill({ color: colors.particle, alpha: 0.9 });
-    dot.x = source.x;
-    dot.y = source.y;
+    const { from, to } = resolveParticleEndpoints(particleDirection, source, target);
+    dot.x = from.x;
+    dot.y = from.y;
     particleLayer.addChild(dot);
     return { dot, source, target };
   });
@@ -215,8 +227,9 @@ async function main() {
     particleCycleT = (particleCycleT + dt * PARTICLE_SPEED) % 1;
     for (const particle of particles) {
       if (!particle.dot.visible) continue;
-      particle.dot.x = particle.source.x + (particle.target.x - particle.source.x) * particleCycleT;
-      particle.dot.y = particle.source.y + (particle.target.y - particle.source.y) * particleCycleT;
+      const { from, to } = resolveParticleEndpoints(particleDirection, particle.source, particle.target);
+      particle.dot.x = from.x + (to.x - from.x) * particleCycleT;
+      particle.dot.y = from.y + (to.y - from.y) * particleCycleT;
     }
   });
 
@@ -241,7 +254,9 @@ async function main() {
   // dimmed/desaturated stars, and the energy particles they emit are
   // dimmed to match — never colored/persisted server-side, and looked up
   // purely by id so it's unaffected by which nodes/edges currently exist
-  // (REQ-EXPLORE-004).
+  // (REQ-EXPLORE-004). "Emit" tracks whichever node is the particle's
+  // current visual departure point under the active direction setting
+  // (REQ-UX-012), so the dimming always matches what's on screen.
   let exploredIds = new Set(
     [...getStatusSnapshot()].filter(([, status]) => status === "read").map(([id]) => id),
   );
@@ -257,12 +272,50 @@ async function main() {
       star.circle(0, 0, radius).fill({ color: isExplored ? colors.explored : colors.accent, alpha: isExplored ? 0.5 : 0.95 });
     }
     for (const particle of particles) {
-      const isExplored = exploredIds.has(particle.source.id);
+      const { from } = resolveParticleEndpoints(particleDirection, particle.source, particle.target);
+      const isExplored = exploredIds.has(from.id);
       particle.dot.clear();
       particle.dot.circle(0, 0, 1.5).fill({ color: isExplored ? colors.explored : colors.particle, alpha: isExplored ? 0.4 : 0.9 });
     }
   }
   applyExploration();
+
+  // Particle direction toggle (REQ-UX-012): a graph-page-only, localStorage
+  // -persisted preference (same client-only pattern as the theme switcher
+  // and exploration status). Toggling it just re-evaluates which endpoint
+  // is "from"/"to" for every particle (via `resolveParticleEndpoints`
+  // above) and re-applies exploration dimming — no rebuild of the pixi
+  // scene, no change to the underlying graph IR.
+  const particleDirectionToggle = document.getElementById("particle-direction-toggle");
+  const themeSwitcherForStacking = document.getElementById("theme-switcher");
+  if (particleDirectionToggle) {
+    function updateParticleDirectionToggleLabel() {
+      const isDependencyFirst = particleDirection === "dependency-first";
+      particleDirectionToggle.textContent = isDependencyFirst ? "Flow: reverse of wikilink" : "Flow: as wikilink";
+      particleDirectionToggle.setAttribute("aria-pressed", String(isDependencyFirst));
+    }
+    // Stacked directly above the Theme button (bottom-left corner): measured
+    // from `#theme-switcher`'s live position rather than a hardcoded rem
+    // guess, since the trigger's actual rendered height depends on font
+    // metrics that are easy to get subtly wrong by hand (see site.css's
+    // comment on #particle-direction-toggle for the history here).
+    const STACK_GAP_PX = 8;
+    function positionParticleDirectionToggle() {
+      if (!themeSwitcherForStacking) return;
+      const rect = themeSwitcherForStacking.getBoundingClientRect();
+      particleDirectionToggle.style.bottom = `${window.innerHeight - rect.top + STACK_GAP_PX}px`;
+    }
+    updateParticleDirectionToggleLabel();
+    positionParticleDirectionToggle();
+    particleDirectionToggle.hidden = false;
+    window.addEventListener("resize", positionParticleDirectionToggle);
+    particleDirectionToggle.addEventListener("click", () => {
+      particleDirection = particleDirection === "dependency-first" ? "wikilink" : "dependency-first";
+      storeDirection(particleDirection);
+      updateParticleDirectionToggleLabel();
+      applyExploration();
+    });
+  }
 
   window.addEventListener("enastro:exploration-changed", (event) => {
     exploredIds = new Set(
@@ -546,6 +599,19 @@ async function main() {
     getNodeColor(id) {
       const isExplored = exploredIds.has(id);
       return isExplored ? colors.explored : colors.accent;
+    },
+    // Particle direction toggle (REQ-UX-012), for E2E test instrumentation
+    // (see src/e2e/particle-direction.e2e.test.ts) — which endpoint of an
+    // edge a particle visually departs from is only observable as pixi.js
+    // draw-call state, not through the DOM/CSS.
+    getParticleDirection() {
+      return particleDirection;
+    },
+    getParticleFromId(sourceId, targetId) {
+      const source = nodeById.get(sourceId);
+      const target = nodeById.get(targetId);
+      if (!source || !target) return null;
+      return resolveParticleEndpoints(particleDirection, source, target).from.id;
     },
   };
 

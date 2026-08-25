@@ -28,6 +28,7 @@ const CLIENT_ASSET_FILENAMES = [
   "graph-view.mjs",
   "exploration.mjs",
   "theme-switcher.mjs",
+  "particle-direction.mjs",
 ];
 
 // pixi.js (WebGL renderer, ADR-0010) is vendored as a single self-contained

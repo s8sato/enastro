@@ -58,3 +58,7 @@ Foam の実装を調査した結果、実態は WebGL ではなく Canvas 2D（`
   [05-artifact-contracts.md](../spec/05-artifact-contracts.md) の改訂と手書きバリデータの更新を伴う。
 - 新しい artifact 面（graph.json の座標・pixi.js クライアントコード）が privacy invariant
   （REQ-SEC-001）を破らないことを、実装ループで privacy-vault の新規テストとして必ず検証する。
+- エネルギー粒子の進行方向は、human review の結果ユーザーが `graph.html` 上でトグル可能な設定
+  （REQ-UX-012, PROPOSED）とした。既定は「dependency-first」（参照先→参照元、知識の積み上げ方向）、
+  代替は wikilink の方向そのまま（`edge.source` → `edge.target`）。どちらも graph IR の
+  `edge.source`/`edge.target` 自体は変更しない、render 層（`graph-view.mjs`）限定の設定。
