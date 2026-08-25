@@ -14,9 +14,13 @@ import {
 /** Legacy (pre-Snapshot) storage key, mirrored here for migration tests. */
 const LEGACY_STORAGE_KEY = "enastro:exploration:v1";
 
-/** Shorthand for building a `{snapshot, log}` state in tests. */
-function state(log: { id: string; status: string; ts: number }[], snapshot: Record<string, string> = {}) {
-  return { snapshot, log };
+/** Shorthand for building a `{snapshot, log, snapshotUpdatedAt}` state in tests. */
+function state(
+  log: { id: string; status: string; ts: number }[],
+  snapshot: Record<string, string> = {},
+  snapshotUpdatedAt = 0,
+) {
+  return { snapshot, log, snapshotUpdatedAt };
 }
 
 /**
@@ -68,29 +72,59 @@ beforeEach(() => {
 });
 
 describe("loadState (REQ-EXPLORE-001)", () => {
-  it("returns an empty snapshot/log when nothing has been stored yet", () => {
-    expect(loadState()).toEqual({ snapshot: {}, log: [] });
+  it("returns a fresh empty snapshot/log with a snapshotUpdatedAt when nothing has been stored yet", () => {
+    const before = Date.now();
+    const loaded = loadState();
+    expect(loaded.snapshot).toEqual({});
+    expect(loaded.log).toEqual([]);
+    expect(loaded.snapshotUpdatedAt).toBeGreaterThanOrEqual(before);
+    expect(loaded.snapshotUpdatedAt).toBeLessThanOrEqual(Date.now());
   });
 
-  it("returns an empty state rather than throwing when the stored value is corrupt JSON", () => {
+  it("eagerly persists the fresh state so snapshotUpdatedAt is stable across reloads", () => {
+    const first = loadState();
+    const second = loadState();
+    expect(second).toEqual(first);
+  });
+
+  it("returns a fresh state rather than throwing when the stored value is corrupt JSON", () => {
     localStorage.setItem(STORAGE_KEY, "{not valid json");
-    expect(loadState()).toEqual({ snapshot: {}, log: [] });
+    const loaded = loadState();
+    expect(loaded.snapshot).toEqual({});
+    expect(loaded.log).toEqual([]);
+    expect(typeof loaded.snapshotUpdatedAt).toBe("number");
   });
 
-  it("returns an empty state rather than throwing when the stored value has no log array", () => {
+  it("returns a fresh state rather than throwing when the stored value has no log array", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ not: "a state" }));
-    expect(loadState()).toEqual({ snapshot: {}, log: [] });
+    const loaded = loadState();
+    expect(loaded.snapshot).toEqual({});
+    expect(loaded.log).toEqual([]);
+    expect(typeof loaded.snapshotUpdatedAt).toBe("number");
   });
 
-  it("migrates a legacy v1 bare event-log array into {snapshot: {}, log}", () => {
+  it("treats a v2-shaped state missing snapshotUpdatedAt as invalid and re-initializes it", () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ snapshot: { "note-a": "read" }, log: [] }));
+    const loaded = loadState();
+    // The pre-Snapshot-timestamp shape is treated as corrupt/legacy-less data:
+    // it's safer to reinitialize than to guess a fake `snapshotUpdatedAt`.
+    expect(loaded.snapshot).toEqual({});
+    expect(loaded.log).toEqual([]);
+    expect(typeof loaded.snapshotUpdatedAt).toBe("number");
+  });
+
+  it("migrates a legacy v1 bare event-log array into {snapshot: {}, log, snapshotUpdatedAt}", () => {
     const legacyLog = [{ id: "note-a", status: "read", ts: 100 }];
     localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(legacyLog));
-    expect(loadState()).toEqual({ snapshot: {}, log: legacyLog });
+    const loaded = loadState();
+    expect(loaded.snapshot).toEqual({});
+    expect(loaded.log).toEqual(legacyLog);
+    expect(typeof loaded.snapshotUpdatedAt).toBe("number");
   });
 
-  it("prefers the v2 {snapshot, log} state over a stale legacy v1 array", () => {
+  it("prefers the v2 {snapshot, log, snapshotUpdatedAt} state over a stale legacy v1 array", () => {
     localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify([{ id: "note-z", status: "read", ts: 1 }]));
-    const v2State = { snapshot: { "note-a": "read" }, log: [] };
+    const v2State = { snapshot: { "note-a": "read" }, log: [], snapshotUpdatedAt: 12345 };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(v2State));
     expect(loadState()).toEqual(v2State);
   });
@@ -112,8 +146,12 @@ describe("appendEvent (REQ-EXPLORE-001, REQ-EXPLORE-002)", () => {
     expect(ok).toBe(false);
     expect(error).toBeInstanceOf(Error);
     expect(next.log).toHaveLength(1);
-    // The failed write must not have silently succeeded:
-    expect(loadState()).toEqual({ snapshot: {}, log: [] });
+    // The failed write must not have silently succeeded: nothing was ever
+    // persisted, so a fresh load starts over (also failing to persist, since
+    // storage is still full, but still returned in-memory).
+    const reloaded = loadState();
+    expect(reloaded.snapshot).toEqual({});
+    expect(reloaded.log).toEqual([]);
   });
 });
 
@@ -222,6 +260,15 @@ describe("squashStateUntil (Squash until here, ADR-0014)", () => {
     expect(squashed.snapshot).toEqual({ "note-a": "unread" });
   });
 
+  it("refreshes snapshotUpdatedAt to the real Squash execution time, not the folded cursorTs", () => {
+    const log = [{ id: "note-a", status: "read", ts: 100 }];
+    const before = Date.now();
+    const squashed = squashStateUntil(state(log, {}, 1), 300);
+    expect(squashed.snapshotUpdatedAt).toBeGreaterThanOrEqual(before);
+    expect(squashed.snapshotUpdatedAt).toBeLessThanOrEqual(Date.now());
+    expect(squashed.snapshotUpdatedAt).not.toBe(300);
+  });
+
   it("folds a net-changed id's final status into the Snapshot, removing all its in-window events", () => {
     const log = [
       { id: "note-a", status: "read", ts: 100 },
@@ -268,10 +315,12 @@ describe("squashStateUntil (Squash until here, ADR-0014)", () => {
     expect(asOf(squashed, Infinity, "note-b")).toBe(asOf(before, Infinity, "note-b"));
   });
 
-  it("is a no-op when cursor is SNAPSHOT_CURSOR_TS (nothing precedes the Snapshot)", () => {
+  it("is a no-op on snapshot/log content when cursor is SNAPSHOT_CURSOR_TS (nothing precedes the Snapshot), but still refreshes snapshotUpdatedAt", () => {
     const log = [{ id: "note-a", status: "read", ts: 100 }];
     const squashed = squashStateUntil(state(log, { "note-z": "read" }), SNAPSHOT_CURSOR_TS);
-    expect(squashed).toEqual({ snapshot: { "note-z": "read" }, log });
+    expect(squashed.snapshot).toEqual({ "note-z": "read" });
+    expect(squashed.log).toEqual(log);
+    expect(typeof squashed.snapshotUpdatedAt).toBe("number");
   });
 });
 

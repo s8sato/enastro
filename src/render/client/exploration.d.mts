@@ -7,6 +7,7 @@ export interface ExplorationEvent {
 export interface ExplorationState {
   snapshot: Record<string, string>;
   log: ExplorationEvent[];
+  snapshotUpdatedAt: number;
 }
 
 export const STORAGE_KEY: string;

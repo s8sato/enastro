@@ -34,6 +34,17 @@
  * history compacted). Both are pure functions; the DOM-wiring code below
  * is responsible for persisting their result and requires an explicit
  * confirmation before doing so.
+ *
+ * The Snapshot also carries a `snapshotUpdatedAt` timestamp (ADR-0014,
+ * "Snapshot 更新時刻表示"), displayed on its History row. It is set eagerly
+ * — the first time `loadState()` has to fall back to a fresh state (no
+ * persisted key yet, a corrupt v2 entry, or a legacy v1-only migration) —
+ * to `Date.now()`, and that fresh state is immediately persisted so the
+ * timestamp is fixed at first load and stable across reloads (it is NOT
+ * regenerated on every load of an already-valid state). `squashStateUntil()`
+ * refreshes it to the real time the Squash was executed. `resetLogAt()`
+ * (used by "Reset to here") never touches the Snapshot at all, so it
+ * leaves `snapshotUpdatedAt` untouched.
  */
 import { formatLocalDateOnly } from "./format-local-time.mjs";
 
@@ -55,43 +66,58 @@ const LEGACY_STORAGE_KEY = "enastro:exploration:v1";
 export const SNAPSHOT_CURSOR_TS = Number.NEGATIVE_INFINITY;
 
 /**
- * Reads the persisted `{snapshot, log}` state from localStorage. Returns
- * `{snapshot: {}, log: []}` if absent/corrupt. Transparently migrates a
- * legacy `v1` bare event-log array (if present, and no `v2` state exists
- * yet) into `{snapshot: {}, log: legacyLog}` — the old key is left in
- * place (harmless orphan) rather than actively deleted.
- * @returns {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}}
+ * Reads the persisted `{snapshot, log, snapshotUpdatedAt}` state from
+ * localStorage. Transparently migrates a legacy `v1` bare event-log array
+ * (if present, and no `v2` state exists yet) into
+ * `{snapshot: {}, log: legacyLog}` — the old key is left in place (harmless
+ * orphan) rather than actively deleted. Whenever no valid `v2` state can be
+ * found (absent, corrupt, or only a legacy migration), a fresh state is
+ * built with `snapshotUpdatedAt: Date.now()` and immediately persisted via
+ * `saveState()` — this fixes the Snapshot's "updated at" timestamp at
+ * first-load time, so it stays stable across subsequent reloads rather
+ * than being recomputed every time. A valid existing `v2` state is
+ * returned as-is, its `snapshotUpdatedAt` left untouched.
+ * @returns {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[], snapshotUpdatedAt: number}}
  */
 export function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && Array.isArray(parsed.log)) {
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        Array.isArray(parsed.log) &&
+        typeof parsed.snapshotUpdatedAt === "number"
+      ) {
         const snapshot = parsed.snapshot && typeof parsed.snapshot === "object" ? parsed.snapshot : {};
-        return { snapshot, log: parsed.log };
+        return { snapshot, log: parsed.log, snapshotUpdatedAt: parsed.snapshotUpdatedAt };
       }
     }
   } catch {
-    // fall through to legacy migration / empty state
+    // fall through to legacy migration / fresh state
   }
+  let freshLog = [];
   try {
     const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
     if (legacyRaw) {
       const legacyParsed = JSON.parse(legacyRaw);
       if (Array.isArray(legacyParsed)) {
-        return { snapshot: {}, log: legacyParsed };
+        freshLog = legacyParsed;
       }
     }
   } catch {
-    // fall through to empty state
+    // fall through to empty log
   }
-  return { snapshot: {}, log: [] };
+  const freshState = { snapshot: {}, log: freshLog, snapshotUpdatedAt: Date.now() };
+  saveState(freshState);
+  return freshState;
 }
 
 /**
- * Persists a `{snapshot, log}` state object to localStorage.
- * @param {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}} state
+ * Persists a `{snapshot, log, snapshotUpdatedAt}` state object to
+ * localStorage.
+ * @param {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[], snapshotUpdatedAt: number}} state
  * @returns {boolean} whether the write succeeded.
  */
 export function saveState(state) {
@@ -117,7 +143,11 @@ export function saveState(state) {
  *   immediately, but it will not survive a reload (REQ-EXPLORE-002).
  */
 export function appendEvent(state, id, status) {
-  const nextState = { snapshot: state.snapshot, log: [...state.log, { id, status, ts: Date.now() }] };
+  const nextState = {
+    snapshot: state.snapshot,
+    log: [...state.log, { id, status, ts: Date.now() }],
+    snapshotUpdatedAt: state.snapshotUpdatedAt,
+  };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
     return { state: nextState, ok: true };
@@ -190,16 +220,20 @@ export function resetLogAt(log, cursorTs) {
  * removes all of those events from the log (`event.ts > cursorTs` is kept
  * untouched). Net status is preserved; only the individual events up to
  * the cursor are compacted away. Also a one-way, destructive rewrite; see
- * `resetLogAt()`'s doc comment for the same caveat.
- * @param {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}} state
+ * `resetLogAt()`'s doc comment for the same caveat. Also refreshes
+ * `snapshotUpdatedAt` to the real time this Squash was executed
+ * (`Date.now()`), reflecting that the Snapshot's content actually changed
+ * just now.
+ * @param {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[], snapshotUpdatedAt: number}} state
  * @param {number} cursorTs
- * @returns {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[]}}
+ * @returns {{snapshot: Record<string, string>, log: {id: string, status: string, ts: number}[], snapshotUpdatedAt: number}}
  */
 export function squashStateUntil(state, cursorTs) {
   const folded = computeStatusAsOf(state, cursorTs);
   return {
     snapshot: Object.fromEntries(folded),
     log: state.log.filter((event) => event.ts > cursorTs),
+    snapshotUpdatedAt: Date.now(),
   };
 }
 
@@ -430,7 +464,9 @@ function main() {
     const snapshotItem = document.createElement("li");
     const snapshotButton = document.createElement("button");
     snapshotButton.type = "button";
-    snapshotButton.append(buildHistoryRow("snapshot", "Snapshot"));
+    snapshotButton.append(
+      buildHistoryRow("snapshot", "Snapshot", undefined, formatEventTime(state.snapshotUpdatedAt, offsetMinutes)),
+    );
     const isSnapshotActive = cursorTs === SNAPSHOT_CURSOR_TS;
     snapshotButton.classList.toggle("active", isSnapshotActive);
     if (isSnapshotActive) {
@@ -537,7 +573,11 @@ function main() {
     ) {
       return;
     }
-    state = { snapshot: state.snapshot, log: resetLogAt(state.log, cursorTs) };
+    state = {
+      snapshot: state.snapshot,
+      log: resetLogAt(state.log, cursorTs),
+      snapshotUpdatedAt: state.snapshotUpdatedAt,
+    };
     if (!persistState(state)) {
       showWarning("Storage is full — this change was applied for now, but won't be saved after reload.");
     }

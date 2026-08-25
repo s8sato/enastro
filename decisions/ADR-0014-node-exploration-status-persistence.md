@@ -258,3 +258,54 @@ Reset to here は `snapshot` を一切参照・変更しない（`state.log` の
 - Squash 後のカーソルを新しい Snapshot の位置に固定する: カーソルの永続化・ボタン活性条件の
   再設計と合わせて別途検討する方が一貫性があると判断し、本改訂ではカーソルの扱いは変更しない。
 
+## Amendment (2026-08-25): Snapshot の更新時刻表示（DECIDED）
+
+ユーザーからの追加要望に基づき、本 ADR を以下のとおり改訂する。
+
+### データモデル: `snapshotUpdatedAt` の追加
+
+永続化する状態を `{ snapshot, log }` から `{ snapshot, log, snapshotUpdatedAt: number }` へ拡張する
+（`snapshotUpdatedAt` は epoch ミリ秒）。この値は History リストの Snapshot 行に、他の Read/Unread
+行と同じ書式（`formatLocalDateOnly`）で右揃え表示される。
+
+### 初期値: ローカルストレージ初期化時に即時確定・永続化
+
+`snapshotUpdatedAt` の初期値は「ローカルストレージ初期化時」とする。具体的には、`loadState()` が
+有効な `v2` 状態を見つけられなかった場合（キー未設定、`v2` データが壊れている、legacy `v1` のみ
+存在、のいずれか）、その場で `snapshotUpdatedAt: Date.now()` を含む新規状態を組み立て、
+`saveState()` で即座に永続化してから返す。これにより、閲覧者が一度も既読/未読操作をしていない
+初回ロードの時点で、既にタイムスタンプが確定・永続化される（従来のように最初の `appendEvent`/
+Reset/Squash まで書き込みを遅延させない）。既に有効な `v2` 状態が存在する場合は、その
+`snapshotUpdatedAt` を含めてそのまま返す（再生成・再永続化しない）。
+
+検討した代替案:
+
+- 最初の実際の書き込み（`appendEvent`/Reset/Squash）まで `snapshotUpdatedAt` の確定を遅延させる方式:
+  閲覧のみで一切のステータス変更をしない閲覧者には永久にタイムスタンプが表示されないままになり、
+  「Snapshot の更新時刻」という表示の意図（＝この閲覧者のローカルな探索記録がいつから存在するか）と
+  ずれるため不採用。
+
+### Squash 実行時: 実行時刻へ更新
+
+`squashStateUntil(state, cursorTs)` は、畳み込み後の `snapshot`/`log` に加えて、`snapshotUpdatedAt`
+を Squash を実際に実行した時刻（`Date.now()`）へ更新する。畳み込み対象の範囲の終端である
+`cursorTs`（rewind 先の過去時点）ではなく、実行時の「今」を採用する——Snapshot の内容がまさに今
+書き換わったことを表す値として、`cursorTs` より実行時刻のほうが意味的に正確なため。
+
+### Reset to here: 影響なし
+
+Reset to here は `snapshot` を一切変更しないため（上記アメンドメント参照）、`snapshotUpdatedAt` も
+当然変更しない。
+
+### 表示箇所: History ドロワーの Snapshot 行のみ
+
+`snapshotUpdatedAt` の表示は、History ドロワー内の Snapshot 行に限定する。ノートページの既読日時
+表示（`data-read-at`）等、他の箇所には影響しない。
+
+検討した代替案:
+
+- Squash 実行後のカーソルを新しい Snapshot の位置に移動させ、かつその更新時刻をどこか別の場所
+  （例: ヘッダ）にも常時表示する: カーソル位置の扱い自体は別途検討中の「History 上のカーソル位置の
+  ブラウザ永続化・ボタン活性条件の再定義」の対象であり、本改訂のスコープではない。History 行内の
+  表示のみで、既存のイベント行の視覚言語（アイコン + ラベル + 右揃えタイムスタンプ）と一貫させる
+  ほうがシンプルと判断した。

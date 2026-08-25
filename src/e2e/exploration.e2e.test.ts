@@ -163,6 +163,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
               { id: "note-a", status: "unread", ts: base + 200 },
               { id: "note-a", status: "read", ts: base + 300 },
             ],
+            snapshotUpdatedAt: base,
           }),
         );
       },
@@ -202,7 +203,11 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
       ({ key }) => {
         localStorage.setItem(
           key,
-          JSON.stringify({ snapshot: {}, log: [{ id: "note-a", status: "read", ts: Date.now() }] }),
+          JSON.stringify({
+            snapshot: {},
+            log: [{ id: "note-a", status: "read", ts: Date.now() }],
+            snapshotUpdatedAt: Date.now(),
+          }),
         );
       },
       { key: STORAGE_KEY },
@@ -236,6 +241,28 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     expect(await markReadButton.isDisabled()).toBe(false);
   });
 
+  it("shows a timestamp on the Snapshot's history row, present from the very first load (ADR-0014)", async () => {
+    await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
+    await page.goto(`${baseUrl}/notes/note-a.html`);
+
+    // Even with zero read/unread actions taken yet, the Snapshot row already
+    // carries a timestamp — it's persisted eagerly on the very first load.
+    await page.click("#exploration-rewind-toggle");
+    const historyEntries = page.locator("#exploration-history-list button");
+    await expect.poll(() => historyEntries.count()).toBe(1);
+    const snapshotEntry = historyEntries.last();
+    const beforeText = (await snapshotEntry.textContent()) ?? "";
+    expect(beforeText).toMatch(/Snapshot/);
+    expect(beforeText).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
+
+    // Reloading again must NOT change the timestamp (it's only set once,
+    // at first initialization, not recomputed on every load).
+    await page.reload();
+    await page.click("#exploration-rewind-toggle");
+    await expect.poll(() => historyEntries.count()).toBe(1);
+    expect(await historyEntries.last().textContent()).toBe(beforeText);
+  });
+
   it("shows a read-at timestamp only while the note is read, doubling as the read/unread cue", async () => {
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
     await page.goto(`${baseUrl}/notes/note-c-alias.html`);
@@ -262,6 +289,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
           JSON.stringify({
             snapshot: {},
             log: [{ id: "note-does-not-exist", status: "read", ts: Date.now() }],
+            snapshotUpdatedAt: Date.now(),
           }),
         );
       },
@@ -287,7 +315,11 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
         // note's build-time modifiedAt, triggering the auto-unread sync.
         localStorage.setItem(
           key,
-          JSON.stringify({ snapshot: {}, log: [{ id: "note-a", status: "read", ts: 1 }] }),
+          JSON.stringify({
+            snapshot: {},
+            log: [{ id: "note-a", status: "read", ts: 1 }],
+            snapshotUpdatedAt: 1,
+          }),
         );
       },
       { key: STORAGE_KEY },
@@ -332,6 +364,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
               { id: "note-a", status: "unread", ts: base + 200 },
               { id: "note-a", status: "read", ts: base + 300 },
             ],
+            snapshotUpdatedAt: base,
           }),
         );
       },
@@ -367,9 +400,9 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
   it("supports Squash until here, folding read/unread history into the Snapshot (REQ-EXPLORE-008)", async () => {
     await page.goto(`${baseUrl}/notes/note-a.html`);
+    const base = Date.now() - 60_000;
     await page.evaluate(
-      ({ key }) => {
-        const base = Date.now() - 60_000;
+      ({ key, base }) => {
         localStorage.setItem(
           key,
           JSON.stringify({
@@ -379,10 +412,11 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
               { id: "note-a", status: "unread", ts: base + 200 },
               { id: "note-b", status: "read", ts: base + 250 },
             ],
+            snapshotUpdatedAt: base,
           }),
         );
       },
-      { key: STORAGE_KEY },
+      { key: STORAGE_KEY, base },
     );
     await page.reload();
 
@@ -390,9 +424,14 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     const historyEntries = page.locator("#exploration-history-list button");
     // 3 real events + the synthetic "Snapshot" entry:
     await expect.poll(() => historyEntries.count()).toBe(4);
+    // Before squashing, the Snapshot row still shows the seeded (old) time.
+    const snapshotEntry = historyEntries.last();
+    const beforeSquashText = (await snapshotEntry.textContent()) ?? "";
+    expect(beforeSquashText).toMatch(/Snapshot/);
     // Rewind to the most recent entry so "Squash until here" covers everything.
     await historyEntries.first().click();
 
+    const beforeSquashAt = Date.now();
     page.once("dialog", (dialog) => dialog.accept());
     await page.click("#exploration-squash-here");
 
@@ -406,6 +445,16 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     );
     expect(stored.log).toEqual([]);
     expect(stored.snapshot).toEqual({ "note-a": "unread", "note-b": "read" });
+    // The Snapshot's updated-at timestamp is refreshed to the real Squash
+    // execution time — not left at the old seeded `base`, and not the
+    // rewound cursor time either (they're both well before `beforeSquashAt`).
+    expect(stored.snapshotUpdatedAt).toBeGreaterThanOrEqual(beforeSquashAt);
+
+    // ...and the History drawer's Snapshot row reflects the new timestamp,
+    // no longer showing the pre-Squash text.
+    const afterSquashText = await historyEntries.last().textContent();
+    expect(afterSquashText).toMatch(/Snapshot/);
+    expect(afterSquashText).not.toBe(beforeSquashText);
 
     // Net effect is unchanged after the squash: note-a still reads unread.
     const markReadButton = page.locator("[data-mark-read]");
