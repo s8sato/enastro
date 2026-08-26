@@ -43,12 +43,28 @@ export function getGitModifiedAtMap(vaultDir: string): Map<string, number> | nul
   try {
     stdout = execFileSync(
       "git",
+      // `-c core.quotePath=false`: git's default `core.quotePath=true` would
+      // otherwise C-quote/octal-escape any non-ASCII byte in a path (e.g.
+      // Japanese note filenames), turning `--name-only` output into escaped
+      // ASCII strings that no longer match the raw UTF-8 relative paths
+      // computed by discoverVault() — silently losing `modifiedAt` for every
+      // such file (all lookups miss, falling back to the "unknown" sentinel).
+      //
       // The trailing `-- .` pathspec scopes both commit selection and the
       // `--name-only` file list to paths under `vaultDir` (combined with
       // `--relative`, cwd-relative). Without it, a vault nested inside a
       // larger repo (e.g. this repo's own fixtures/) would walk the whole
       // repository's history and list unrelated files outside the vault.
-      ["log", "--relative", "--name-only", `--format=${RECORD_SEPARATOR}%cI`, "--", "."],
+      [
+        "-c",
+        "core.quotePath=false",
+        "log",
+        "--relative",
+        "--name-only",
+        `--format=${RECORD_SEPARATOR}%cI`,
+        "--",
+        ".",
+      ],
       { cwd: vaultDir, encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] },
     );
   } catch {

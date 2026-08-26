@@ -87,6 +87,17 @@ describe("getGitModifiedAtMap", () => {
     expect(map?.get("note-a.md")).toBe(Date.parse("2020-01-01T00:00:00Z"));
   });
 
+  it("maps non-ASCII (e.g. Japanese) filenames correctly, unaffected by git's default path-quoting", () => {
+    vaultDir = mkdtempSync(path.join(tmpdir(), "enastro-git-modified-at-"));
+    initRepo(vaultDir);
+    writeFileSync(path.join(vaultDir, "圏.md"), "category");
+    commitFile(vaultDir, "圏.md", "2020-01-01T00:00:00Z");
+
+    const map = getGitModifiedAtMap(vaultDir);
+
+    expect(map?.get("圏.md")).toBe(Date.parse("2020-01-01T00:00:00Z"));
+  });
+
   it("scopes results to files under vaultDir when the vault is a subdirectory of a larger repo", () => {
     const repoDir = mkdtempSync(path.join(tmpdir(), "enastro-git-modified-at-"));
     vaultDir = repoDir; // cleaned up together

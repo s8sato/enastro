@@ -3,6 +3,21 @@
 本プロジェクトのバージョンは [Semantic Versioning](https://semver.org/lang/ja/) に準拠する。
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) を参考にする。
 
+## [Unreleased]
+
+### 修正
+
+- **非 ASCII（日本語等）ファイル名の vault で `modifiedAt`（"Updated" 表示）が
+  一切表示されない不具合**: `getGitModifiedAtMap()`（`src/vault/git-modified-at.ts`）が
+  実行する `git log --name-only` は、git の既定設定 `core.quotePath=true` の影響で
+  非 ASCII バイトを含むパスを C-quote/8進エスケープして返す。この結果、
+  `discoverVault()` が計算する生の UTF-8 相対パスと一致せず、日本語ファイル名の
+  ノートすべてで `modifiedAt` の参照が失敗し、"Updated" 表示・検索対象・
+  REQ-EXPLORE-007 の自動 unread 判定のいずれからも静かに除外されていた
+  （ADR-0015 の「不明」フォールバックに落ちる）。`git` 呼び出しに
+  `-c core.quotePath=false` を追加して修正した。CI に git が無い／履歴が浅いこと
+  が原因ではない（`fetch-depth: 0` は無関係に必要な設定のまま）。
+
 ## [0.3.2] - 2026-08-26
 
 ### 追加
