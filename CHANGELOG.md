@@ -3,7 +3,7 @@
 本プロジェクトのバージョンは [Semantic Versioning](https://semver.org/lang/ja/) に準拠する。
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) を参考にする。
 
-## [Unreleased]
+## [0.3.3] - 2026-08-28
 
 ### 修正
 
@@ -17,6 +17,12 @@
   （ADR-0015 の「不明」フォールバックに落ちる）。`git` 呼び出しに
   `-c core.quotePath=false` を追加して修正した。CI に git が無い／履歴が浅いこと
   が原因ではない（`fetch-depth: 0` は無関係に必要な設定のまま）。
+
+- **note ページから Graph view へ `?focus=` 遷移した直後、フォーカスノードがタップで
+  解除されない不具合**: `focusOnNode()` がタッチ操作の状態（`armedTouchNodeId`）を
+  更新していなかったため、遷移直後に他ノードをタップしてもフォーカスノードの
+  ハイライトが残留していた。`focusOnNode()` 内で `armedTouchNodeId` を更新するよう
+  修正した。
 
 ## [0.3.2] - 2026-08-26
 
