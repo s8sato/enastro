@@ -984,6 +984,9 @@ span.broken-link {
   margin: 0;
   padding: 0;
   display: grid;
+  /* Caps the implicit column at the container width so a long,
+   * unbreakable note id can't inflate it and force horizontal scroll. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.3rem;
 }
 
