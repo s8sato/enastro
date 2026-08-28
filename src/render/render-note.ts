@@ -2,6 +2,7 @@ import MarkdownIt from "markdown-it";
 import hljs from "highlight.js";
 import type { KnowledgeGraph } from "../graph/types.js";
 import { sanitizeHtml } from "../sanitize/index.js";
+import { installExternalLinkRenderer } from "./external-links.js";
 import { installMathRenderer, substituteMathFragments, type MathRenderEnv } from "./math.js";
 import { substituteInlineTags } from "./substitute-tags.js";
 import { substituteLinks, type SubstituteLinksOptions } from "./substitute-links.js";
@@ -34,6 +35,9 @@ const markdown: InstanceType<typeof MarkdownIt> = new MarkdownIt({
 // full rationale (server-side, and deliberately bypassing sanitizeHtml's
 // allowlist via a placeholder substituted back in below).
 installMathRenderer(markdown);
+
+// External links open in a new tab, REQ-UX-014 — see external-links.ts.
+installExternalLinkRenderer(markdown);
 
 export interface RenderNoteBodyResult {
   html: string;

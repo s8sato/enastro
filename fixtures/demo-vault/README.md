@@ -9,7 +9,7 @@ CI 経由で GitHub Pages に自動公開する enastro 自身のデモサイト
 約 20 件の相互リンクするノートで構成し、Graph UI（`graph.html`）が実際にどう見えるかを
 訪問者に示すためのものである。
 
-対応 REQ: REQ-OPS-002（[ADR-0013](../../decisions/ADR-0013-ci-github-pages-pipeline-scope.md)）。
+対応 REQ: REQ-OPS-002（[ADR-0013](../../decisions/ADR-0013-ci-github-pages-pipeline-scope.md)）、REQ-UX-014（`welcome.md` の外部リンクが新しいタブで開くことを実演する）。
 
 ## 構成
 
