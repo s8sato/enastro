@@ -48,7 +48,7 @@ afterEach(async () => {
 
 describe("browser E2E: 12-theme switcher (REQ-UX-011)", () => {
   it("persists a theme choice across index/note/graph navigation via the <select>", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     await page.click("#theme-trigger");
     await page.locator("#theme-select").selectOption("aurora");
 
@@ -59,18 +59,18 @@ describe("browser E2E: 12-theme switcher (REQ-UX-011)", () => {
       .poll(() => page.evaluate(() => localStorage.getItem("enastro:theme:v1")))
       .toBe("aurora");
 
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     // The FOUC-prevention inline <head> script applies the stored theme
     // before this module even loads, so it should already be set by the
     // time the page is interactive.
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe("aurora");
 
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe("aurora");
   });
 
   it("supports choosing a theme purely via keyboard on the accessible <select>, without the dial", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     await page.click("#theme-trigger");
 
     const select = page.locator("#theme-select");
@@ -87,7 +87,7 @@ describe("browser E2E: 12-theme switcher (REQ-UX-011)", () => {
   });
 
   it("reverts an uncommitted dial hover-preview when the dialog is closed via Escape", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     await page.click("#theme-trigger");
     await page.locator("#theme-select").selectOption("nova");
     await expect
@@ -111,7 +111,7 @@ describe("browser E2E: 12-theme switcher (REQ-UX-011)", () => {
   });
 
   it("updates the graph's node fill color to the active theme's accent (REQ-UX-011)", async () => {
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
       .toBe("true");
@@ -131,14 +131,14 @@ describe("browser E2E: 12-theme switcher (REQ-UX-011)", () => {
   });
 
   it("updates the mark-read icon's color to the active theme's accent once a note is read (REQ-UX-011)", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     await page.click("#theme-trigger");
     await page.locator("#theme-select").selectOption("aurora");
     await expect
       .poll(() => page.evaluate(() => localStorage.getItem("enastro:theme:v1")))
       .toBe("aurora");
 
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe("aurora");
 
     await page.click("[data-mark-read]");

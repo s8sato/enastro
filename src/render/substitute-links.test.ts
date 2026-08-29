@@ -9,7 +9,7 @@ function graph(nodes: Array<Omit<KnowledgeGraph["nodes"][number], "modifiedAt">>
 }
 
 describe("substituteLinks", () => {
-  it("rewrites a resolved public link into a Markdown link to <id>.html, using the target note's title as the label (ADR-0009)", () => {
+  it("rewrites a resolved public link into a Markdown link to a sibling note directory (../<id>/, ADR-0018), using the target note's title as the label (ADR-0009)", () => {
     const g = graph([
       { id: "a", title: "A", aliases: [], tags: [], publish: true, path: "/a.md", body: "" },
       { id: "b", title: "B", aliases: [], tags: [], publish: true, path: "/b.md", body: "" },
@@ -17,7 +17,7 @@ describe("substituteLinks", () => {
 
     const { text, removedTargets } = substituteLinks("See [[b]] for details.", g);
 
-    expect(text).toBe("See [B](b.html) for details.");
+    expect(text).toBe("See [B](../b/) for details.");
     expect(removedTargets).toEqual([]);
   });
 
@@ -29,7 +29,7 @@ describe("substituteLinks", () => {
 
     const { text } = substituteLinks("See [[b|custom label]].", g);
 
-    expect(text).toBe("See [custom label](b.html).");
+    expect(text).toBe("See [custom label](../b/).");
   });
 
   it("uses the title, not the raw target/id text, as the label when id and title differ (ADR-0009)", () => {
@@ -48,7 +48,7 @@ describe("substituteLinks", () => {
 
     const { text } = substituteLinks("See [[note-x]].", g);
 
-    expect(text).toBe("See [A Completely Different Title](note-x.html).");
+    expect(text).toBe("See [A Completely Different Title](../note-x/).");
   });
 
   it("deletes an occurrence entirely (including display text) when the target is unpublished", () => {
@@ -95,7 +95,7 @@ describe("substituteLinks", () => {
     expect(text).toBe("Inline `[[b]]` and:\n```\n[[b]]\n```");
   });
 
-  it("rewrites an embed of an allowlisted attachment into a Markdown image pointing at ../attachments/<id>", () => {
+  it("rewrites an embed of an allowlisted attachment into a Markdown image pointing at ../../attachments/<id> (ADR-0018)", () => {
     const g = graph([{ id: "a", title: "A", aliases: [], tags: [], publish: true, path: "/a.md", body: "" }]);
     const attachments = [{ id: "attachments/public.png", filePath: "/vault/attachments/public.png" }];
 
@@ -104,7 +104,7 @@ describe("substituteLinks", () => {
       publishedAttachmentIds: new Set(["attachments/public.png"]),
     });
 
-    expect(text).toBe("See ![public.png](../attachments/public.png).");
+    expect(text).toBe("See ![public.png](../../attachments/public.png).");
     expect(removedTargets).toEqual([]);
   });
 
@@ -117,7 +117,7 @@ describe("substituteLinks", () => {
       publishedAttachmentIds: new Set(["attachments/public.png"]),
     });
 
-    expect(text).toBe("See [the image](../attachments/public.png).");
+    expect(text).toBe("See [the image](../../attachments/public.png).");
   });
 
   it("deletes an embed of a non-allowlisted attachment entirely (ADR-0003)", () => {

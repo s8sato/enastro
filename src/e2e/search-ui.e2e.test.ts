@@ -37,7 +37,7 @@ afterAll(async () => {
 
 describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002/003)", () => {
   it("filters the note list via the search box (REQ-UX-001)", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
 
     await page.waitForSelector("#tag-filters button");
 
@@ -59,7 +59,7 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
   });
 
   it("filters the note list via AND tag selection (REQ-UX-002)", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     await page.waitForSelector("#tag-filters button");
 
     await page.click('#tag-filters button[data-tag="example"]');
@@ -79,29 +79,29 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
   });
 
   it("navigates from a backlink to the linking note (REQ-UX-003)", async () => {
-    await page.goto(`${baseUrl}/notes/note-b.html`);
+    await page.goto(`${baseUrl}/notes/note-b/`);
 
-    await page.click('.backlinks a[href="note-a.html"]');
+    await page.click('.backlinks a[href="../note-a/"]');
 
-    await expect.poll(() => page.url()).toContain("/notes/note-a.html");
+    await expect.poll(() => page.url()).toContain("/notes/note-a/");
     await expect.poll(() => page.locator("article h1").textContent()).toBe("Note A");
   });
 
   it("navigates from an inline wikilink in the note body to the linked note (REQ-CONTENT-001)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
 
     await page.click('article a:has-text("Note B")');
 
-    await expect.poll(() => page.url()).toContain("/notes/note-b.html");
+    await expect.poll(() => page.url()).toContain("/notes/note-b/");
     await expect.poll(() => page.locator("article h1").textContent()).toBe("Note B");
   });
 
   it("clicking a tag on a note page jumps to the index page pre-filtered by that tag (REQ-UX-008)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
 
-    await page.click('a[href="../index.html?tags=example"]');
+    await page.click('a[href="../../?tags=example"]');
 
-    await expect.poll(() => page.url()).toContain("/index.html?tags=example");
+    await expect.poll(() => page.url()).toContain("/?tags=example");
     await page.waitForSelector("#tag-filters button");
     await expect
       .poll(() => page.locator('#tag-filters button[data-tag="example"]').getAttribute("aria-pressed"))
@@ -120,7 +120,7 @@ describe("browser E2E: local-timezone last-modified display (REQ-UX-007)", () =>
     const context = await browser.newContext({ timezoneId: "Asia/Tokyo" });
     const jstPage = await context.newPage();
     try {
-      await jstPage.goto(`${baseUrl}/notes/note-a.html`);
+      await jstPage.goto(`${baseUrl}/notes/note-a/`);
 
       await expect
         .poll(() => jstPage.locator(".date-value[data-modified]").textContent())

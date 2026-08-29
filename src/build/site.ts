@@ -135,7 +135,8 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
     ].sort((a, b) => a.id.localeCompare(b.id));
 
     const page = renderNotePage({ node, bodyHtml, backlinks: backlinkNodes, modifiedAt, modifiedAtEpochMs, siteConfig });
-    const notePath = path.join(outDir, "notes", `${node.id}.html`);
+    // Clean URL: notes/<id>/index.html, not notes/<id>.html (ADR-0018).
+    const notePath = path.join(outDir, "notes", node.id, "index.html");
     mkdirSync(path.dirname(notePath), { recursive: true });
     writeFileSync(notePath, page, "utf-8");
 
@@ -143,7 +144,9 @@ export function buildSite(vaultDir: string, outDir: string): BuildSiteResult {
   }
 
   writeFileSync(path.join(outDir, "index.html"), renderIndexPage(sortedNodes, siteConfig), "utf-8");
-  writeFileSync(path.join(outDir, "graph.html"), renderGraphPage(siteConfig), "utf-8");
+  // Clean URL: graph/index.html, not graph.html (ADR-0018).
+  mkdirSync(path.join(outDir, "graph"), { recursive: true });
+  writeFileSync(path.join(outDir, "graph", "index.html"), renderGraphPage(siteConfig), "utf-8");
 
   // Layout coordinates are precomputed at build time, over the public
   // projection only (REQ-PUB-002), via a deterministic force simulation

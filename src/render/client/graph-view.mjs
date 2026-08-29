@@ -122,7 +122,9 @@ async function main() {
   /** @type {{nodes: {id: string, title: string, tags: string[], x: number, y: number}[], edges: {source: string, target: string, kind: string}[]}} */
   let graph;
   try {
-    const response = await fetch("graph.json");
+    // The graph page lives at graph/index.html (ADR-0018's clean URL
+    // structure), one level below the site root where graph.json is written.
+    const response = await fetch("../graph.json");
     graph = await response.json();
   } catch {
     if (status) status.textContent = "Failed to load graph data.";
@@ -483,11 +485,11 @@ async function main() {
     });
     star.on("pointertap", (event) => {
       if (event.pointerType !== "touch" && event.pointerType !== "pen") {
-        window.location.href = `notes/${encodeURIComponent(node.id)}.html`;
+        window.location.href = `../notes/${encodeURIComponent(node.id)}/`;
         return;
       }
       if (armedTouchNodeId === node.id) {
-        window.location.href = `notes/${encodeURIComponent(node.id)}.html`;
+        window.location.href = `../notes/${encodeURIComponent(node.id)}/`;
         return;
       }
       if (armedTouchNodeId) {

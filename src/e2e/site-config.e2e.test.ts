@@ -60,23 +60,23 @@ afterEach(async () => {
 
 describe("browser E2E: enastro.config.json build-time site defaults (ADR-0016)", () => {
   it("applies siteTitle to the All Notes page's <title> and <h1>", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     expect(await page.title()).toBe("My Garden");
     expect(await page.locator("h1").first().textContent()).toBe("My Garden");
   });
 
   it("applies siteTitle to the graph page's <title>", async () => {
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     expect(await page.title()).toBe("My Garden · Graph view");
   });
 
   it("applies defaultTheme on first visit with no stored preference", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe("nova");
   });
 
   it("applies defaultParticleDirection on first visit with no stored preference", async () => {
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
       .toBe("true");

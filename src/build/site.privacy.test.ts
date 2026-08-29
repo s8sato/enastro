@@ -53,11 +53,11 @@ describe("buildSite privacy scan (fixtures/privacy-vault)", () => {
     // The private note itself must not have a rendered page, and no link may
     // point to it.
     const noteFiles = readdirSync(path.join(outDir, "notes"));
-    expect(noteFiles).not.toContain("private-note.html");
+    expect(noteFiles).not.toContain("private-note");
     for (const file of files) {
       const content = readFileSync(file, "utf-8");
-      expect(content, `${path.relative(outDir, file)} must not link to private-note.html`).not.toContain(
-        "private-note.html",
+      expect(content, `${path.relative(outDir, file)} must not link to private-note`).not.toContain(
+        "private-note/",
       );
     }
 
@@ -66,7 +66,7 @@ describe("buildSite privacy scan (fixtures/privacy-vault)", () => {
     expect(graph.nodes.map((n) => n.id)).not.toContain("private-note");
   });
 
-  it("never exposes the private note's identity via graph.json's layout coordinates or graph.html (REQ-SEC-001, ADR-0010/0012)", () => {
+  it("never exposes the private note's identity via graph.json's layout coordinates or graph/index.html (REQ-SEC-001, ADR-0010/0012)", () => {
     outDir = mkdtempSync(path.join(tmpdir(), "enastro-privacy-"));
     buildSite(vaultDir, outDir);
 
@@ -88,11 +88,11 @@ describe("buildSite privacy scan (fixtures/privacy-vault)", () => {
       expect(Number.isFinite(node.y)).toBe(true);
     }
 
-    // graph.html itself templates no node/edge data server-side (it only
-    // wires up a client script that fetches the already-public graph.json),
-    // so it cannot leak anything by construction; asserted here anyway as a
-    // regression guard.
-    const graphHtml = readFileSync(path.join(outDir, "graph.html"), "utf-8");
+    // graph/index.html itself templates no node/edge data server-side (it
+    // only wires up a client script that fetches the already-public
+    // graph.json), so it cannot leak anything by construction; asserted
+    // here anyway as a regression guard.
+    const graphHtml = readFileSync(path.join(outDir, "graph", "index.html"), "utf-8");
     for (const forbidden of FORBIDDEN_STRINGS) {
       expect(graphHtml).not.toContain(forbidden);
     }
@@ -104,8 +104,8 @@ describe("buildSite privacy scan (fixtures/privacy-vault)", () => {
     outDir = mkdtempSync(path.join(tmpdir(), "enastro-privacy-"));
     buildSite(vaultDir, outDir);
 
-    const publicNote = readFileSync(path.join(outDir, "notes", "public-note.html"), "utf-8");
-    expect(publicNote).not.toContain("private-note.html");
+    const publicNote = readFileSync(path.join(outDir, "notes", "public-note", "index.html"), "utf-8");
+    expect(publicNote).not.toContain("private-note/");
     expect(publicNote).not.toContain("broken-link");
   });
 
@@ -127,7 +127,7 @@ describe("buildSite privacy scan (fixtures/privacy-vault)", () => {
       expect(content, `${path.relative(outDir, file)} must not mention private.png`).not.toContain("private.png");
     }
 
-    const publicNote = readFileSync(path.join(outDir, "notes", "public-note.html"), "utf-8");
-    expect(publicNote).toContain('src="../attachments/public.png"');
+    const publicNote = readFileSync(path.join(outDir, "notes", "public-note", "index.html"), "utf-8");
+    expect(publicNote).toContain('src="../../attachments/public.png"');
   });
 });

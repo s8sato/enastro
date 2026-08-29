@@ -38,8 +38,8 @@ privacy invariant（非公開情報の非漏洩）を検証するための vault
 artifact 生成（`src/build/site.ts`）も本 vault で検証済み: `src/build/site.privacy.test.ts`
 が `dist/` 配下の全ファイルをスキャンし、非公開ノートのタイトル・タグ・alias
 （`Private Note`, `private-secret`, `confidential-alias`）がどこにも出現しないこと、
-`private-note.html` というページが生成されないこと、`graph.json` に `private-note`
-という id の node が含まれないこと、`public-note.html` から `private-note.html` への
+`private-note/` というページが生成されないこと、`graph.json` に `private-note`
+という id の node が含まれないこと、`public-note/` から `private-note/` への
 リンクが一切存在しないことを確認している（REQ-SEC-001, ADR-0002）。
 なお `another-public-note.md` の地の文（公開ノートの著者自身が書いた説明文）が
 「private-note」という語を字面として含む箇所は privacy scan の対象外としている

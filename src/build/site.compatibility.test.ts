@@ -22,7 +22,7 @@ describe("buildSite (fixtures/compatibility-vault, REQ-CONTENT-005/008)", () => 
 
     const noteFiles = readdirSync(path.join(outDir, "notes")).sort();
     expect(noteFiles).toEqual(
-      ["unsupported-syntax.html", "日本語のノート.html", "絵文字-emoji-📘.html"].sort(),
+      ["unsupported-syntax", "日本語のノート", "絵文字-emoji-📘"].sort(),
     );
 
     const graphJson = JSON.parse(readFileSync(path.join(outDir, "graph.json"), "utf-8")) as {
@@ -37,25 +37,26 @@ describe("buildSite (fixtures/compatibility-vault, REQ-CONTENT-005/008)", () => 
     outDir = mkdtempSync(path.join(tmpdir(), "enastro-compat-"));
     buildSite(vaultDir, outDir);
 
-    const jaNote = readFileSync(path.join(outDir, "notes", "日本語のノート.html"), "utf-8");
+    const jaNote = readFileSync(path.join(outDir, "notes", "日本語のノート", "index.html"), "utf-8");
     // markdown-it percent-encodes non-ASCII characters in href attributes;
     // this is standards-compliant and browsers resolve it back to the
-    // literal Unicode filename on disk. The href is relative to the note's
-    // own directory (notes/), so it must NOT be prefixed with "notes/" again.
+    // literal Unicode directory name on disk. The href is relative to the
+    // note's own directory (notes/<id>/, ADR-0018), so a sibling note link
+    // goes up one level then into the target's own directory.
     expect(jaNote).toContain(
-      '<a href="%E7%B5%B5%E6%96%87%E5%AD%97-emoji-%F0%9F%93%98.html">',
+      '<a href="../%E7%B5%B5%E6%96%87%E5%AD%97-emoji-%F0%9F%93%98/">',
     );
 
-    const emojiNote = readFileSync(path.join(outDir, "notes", "絵文字-emoji-📘.html"), "utf-8");
+    const emojiNote = readFileSync(path.join(outDir, "notes", "絵文字-emoji-📘", "index.html"), "utf-8");
     expect(emojiNote).toContain("Backlinks");
-    expect(emojiNote).toContain('<a href="日本語のノート.html">');
+    expect(emojiNote).toContain('<a href="../日本語のノート/">');
   });
 
   it("passes unsupported OFM syntax through unchanged, without failing the build", () => {
     outDir = mkdtempSync(path.join(tmpdir(), "enastro-compat-"));
     buildSite(vaultDir, outDir);
 
-    const html = readFileSync(path.join(outDir, "notes", "unsupported-syntax.html"), "utf-8");
+    const html = readFileSync(path.join(outDir, "notes", "unsupported-syntax", "index.html"), "utf-8");
 
     // Callout: renders as a plain blockquote, the `[!note]` marker is not
     // specially interpreted and remains as literal text.
@@ -66,7 +67,7 @@ describe("buildSite (fixtures/compatibility-vault, REQ-CONTENT-005/008)", () => 
     // (target contains `#`), so they remain as literal, unconverted text.
     expect(html).toContain("[[日本語のノート#heading]]");
     expect(html).toContain("[[日本語のノート#^blockid]]");
-    expect(html).not.toContain('href="notes/日本語のノート.html#heading"');
+    expect(html).not.toContain('href="../日本語のノート/#heading"');
 
     // dataview / canvas-like code blocks: pass through as plain code, with
     // no special interpretation. The JSON blob is now syntax-highlighted

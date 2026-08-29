@@ -6,7 +6,7 @@ CI 経由で GitHub Pages に自動公開する enastro 自身のデモサイト
 
 `fixtures/basic-vault`・`fixtures/privacy-vault` 等が個別の REQ 検証を目的とした最小構成なのに対し、
 この vault は「ノートの取り方（PKM: Personal Knowledge Management）」というテーマで書かれた
-約 20 件の相互リンクするノートで構成し、Graph UI（`graph.html`）が実際にどう見えるかを
+約 20 件の相互リンクするノートで構成し、Graph UI（`graph/`）が実際にどう見えるかを
 訪問者に示すためのものである。
 
 対応 REQ: REQ-OPS-002（[ADR-0013](../../decisions/ADR-0013-ci-github-pages-pipeline-scope.md)）、REQ-UX-014（`welcome.md` の外部リンクが新しいタブで開くことを実演する）。

@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 describe("buildSite (fixtures/basic-vault)", () => {
-  it("writes index.html, one page per published note, graph.json and search-index.json", () => {
+  it("writes index.html, one page per published note (clean URL, ADR-0018), graph.json and search-index.json", () => {
     outDir = mkdtempSync(path.join(tmpdir(), "enastro-site-"));
 
     const { warnings } = buildSite(vaultDir, outDir);
@@ -24,36 +24,37 @@ describe("buildSite (fixtures/basic-vault)", () => {
     expect(warnings).toEqual([]);
 
     const topLevel = readdirSync(outDir).sort();
-    expect(topLevel).toEqual(["assets", "graph.html", "graph.json", "index.html", "notes", "search-index.json"]);
+    expect(topLevel).toEqual(["assets", "graph", "graph.json", "index.html", "notes", "search-index.json"]);
 
-    const noteFiles = readdirSync(path.join(outDir, "notes")).sort();
-    expect(noteFiles).toEqual([
-      "note-a.html",
-      "note-b.html",
-      "note-c-alias.html",
-      "note-d-broken-link.html",
-    ]);
+    const noteDirs = readdirSync(path.join(outDir, "notes")).sort();
+    expect(noteDirs).toEqual(["note-a", "note-b", "note-c-alias", "note-d-broken-link"]);
+    for (const dir of noteDirs) {
+      expect(readdirSync(path.join(outDir, "notes", dir))).toEqual(["index.html"]);
+    }
+    expect(readdirSync(path.join(outDir, "graph"))).toEqual(["index.html"]);
   });
 
   it("renders resolved links, backlinks, and a broken-link span, and produces a schema-valid graph.json", () => {
     outDir = mkdtempSync(path.join(tmpdir(), "enastro-site-"));
     buildSite(vaultDir, outDir);
 
-    const noteA = readFileSync(path.join(outDir, "notes", "note-a.html"), "utf-8");
+    const noteA = readFileSync(path.join(outDir, "notes", "note-a", "index.html"), "utf-8");
     // The inline wikilink lives inside <article>, alongside its surrounding
     // prose, to avoid a false-positive match against the (correct)
     // same-looking href in the unrelated <section class="backlinks"> below.
-    expect(noteA).toContain('This note links to <a href="note-b.html">Note B</a>');
+    // Note pages now live at notes/<id>/index.html (ADR-0018), so a sibling
+    // note link goes up one level then into the target's own directory.
+    expect(noteA).toContain('This note links to <a href="../note-b/">Note B</a>');
     // The note's own first H1 (from its body) is the only <h1>; the page no
     // longer injects a separate title heading (ADR-0009). The note id is
     // instead shown as a small, always-visible, click-to-copy string.
     expect(noteA).toContain("<article><h1>Note A</h1>");
     expect(noteA).toContain('<p class="note-id"><code>note-a</code>');
     expect(noteA).toContain('data-copy="note-a"');
-    expect(noteA).toContain('<script type="module" src="../assets/copy-id.mjs"></script>');
+    expect(noteA).toContain('<script type="module" src="../../assets/copy-id.mjs"></script>');
     // Every note page links back to the index/landing page (REQ-UX-006).
     expect(noteA).toContain(
-      '<nav><a href="../index.html">All notes</a> <a href="../graph.html?focus=note-a">Graph view</a><button type="button" id="exploration-rewind-toggle" hidden>HISTORY</button></nav>',
+      '<nav><a href="../../">All notes</a> <a href="../../graph/?focus=note-a">Graph view</a><button type="button" id="exploration-rewind-toggle" hidden>HISTORY</button></nav>',
     );
     // Every note page shows its last-modified ("Updated") timestamp,
     // formatted in UTC as a deterministic no-JS fallback (REQ-UX-007,
@@ -64,28 +65,28 @@ describe("buildSite (fixtures/basic-vault)", () => {
     expect(noteA).toMatch(
       /<span class="date-label">Updated<\/span> <span class="date-value" data-modified="\d+">\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC<\/span>/,
     );
-    expect(noteA).toContain('<script type="module" src="../assets/local-time.mjs"></script>');
+    expect(noteA).toContain('<script type="module" src="../../assets/local-time.mjs"></script>');
     // Theme switcher trigger + client script present on every note page
     // (REQ-UX-011), and the FOUC-prevention inline script runs before
     // site.css would otherwise paint the default theme.
     expect(noteA).toContain('id="theme-trigger"');
-    expect(noteA).toContain('<script type="module" src="../assets/theme-switcher.mjs"></script>');
+    expect(noteA).toContain('<script type="module" src="../../assets/theme-switcher.mjs"></script>');
     expect(noteA).toContain('localStorage.getItem("enastro:theme:v1")');
     // Tags are links to the index page pre-filtered by that tag (REQ-UX-008).
-    expect(noteA).toContain('<a href="../index.html?tags=example">#example</a>');
-    expect(noteA).toContain('<a href="../index.html?tags=inline-tag">#inline-tag</a>');
+    expect(noteA).toContain('<a href="../../?tags=example">#example</a>');
+    expect(noteA).toContain('<a href="../../?tags=inline-tag">#inline-tag</a>');
     // ...including inline `#tag` mentions inside the note body itself, not
     // just the tag list near the note id (REQ-UX-008).
     expect(noteA).toContain(
-      'It also has an inline <a href="../index.html?tags=inline-tag">#inline-tag</a>.',
+      'It also has an inline <a href="../../?tags=inline-tag">#inline-tag</a>.',
     );
 
-    const noteB = readFileSync(path.join(outDir, "notes", "note-b.html"), "utf-8");
+    const noteB = readFileSync(path.join(outDir, "notes", "note-b", "index.html"), "utf-8");
     // note-a links to note-b twice, so note-a should appear as a backlink.
     expect(noteB).toContain("Backlinks");
-    expect(noteB).toContain('<a href="note-a.html">');
+    expect(noteB).toContain('<a href="../note-a/">');
 
-    const noteD = readFileSync(path.join(outDir, "notes", "note-d-broken-link.html"), "utf-8");
+    const noteD = readFileSync(path.join(outDir, "notes", "note-d-broken-link", "index.html"), "utf-8");
     expect(noteD).toContain('class="broken-link"');
     expect(noteD).toContain("does-not-exist");
 
@@ -127,7 +128,7 @@ describe("buildSite (fixtures/basic-vault)", () => {
     try {
       buildSite(nonGitVaultDir, outDir);
 
-      const noteA = readFileSync(path.join(outDir, "notes", "note-a.html"), "utf-8");
+      const noteA = readFileSync(path.join(outDir, "notes", "note-a", "index.html"), "utf-8");
       expect(noteA).not.toContain("data-modified");
       expect(noteA).not.toContain("Updated");
       expect(noteA).toContain('<p class="note-dates">');

@@ -47,7 +47,7 @@ describe("browser E2E: Graph UI (REQ-GRAPH-004/005, REQ-UX-009/010, ADR-0010)", 
       consoleErrors.push(error.message);
     });
 
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
 
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive), {
@@ -62,7 +62,7 @@ describe("browser E2E: Graph UI (REQ-GRAPH-004/005, REQ-UX-009/010, ADR-0010)", 
   });
 
   it("navigates to a note page when a node is clicked", async () => {
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive), {
         timeout: 15_000,
@@ -70,7 +70,7 @@ describe("browser E2E: Graph UI (REQ-GRAPH-004/005, REQ-UX-009/010, ADR-0010)", 
       .toBe("true");
 
     const graph = await page.evaluate(async () => {
-      const response = await (globalThis as any).fetch("graph.json");
+      const response = await (globalThis as any).fetch("../graph.json");
       return (await response.json()) as { nodes: Array<{ id: string }> };
     });
 
@@ -92,7 +92,7 @@ describe("browser E2E: Graph UI (REQ-GRAPH-004/005, REQ-UX-009/010, ADR-0010)", 
       await page.mouse.click(box.x + screenPosition.x, box.y + screenPosition.y);
     }
 
-    await page.waitForURL(/\/notes\/.*\.html$/, { timeout: 5_000 });
-    expect(page.url()).toContain(`/notes/${nodeId}.html`);
+    await page.waitForURL(/\/notes\/.*\/$/, { timeout: 5_000 });
+    expect(page.url()).toContain(`/notes/${nodeId}/`);
   });
 });

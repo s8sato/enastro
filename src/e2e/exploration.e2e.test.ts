@@ -64,7 +64,7 @@ beforeEach(async () => {
 
 describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
   it("marks a note as read via the note page button, dimming its bullet on the index page", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
 
     const markReadButton = page.locator("[data-mark-read]");
     await expect.poll(() => markReadButton.isVisible()).toBe(true);
@@ -74,7 +74,7 @@ describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
     expect(await markReadButton.textContent()).toBe("Mark as unread");
     expect(await markReadButton.getAttribute("aria-pressed")).toBe("true");
 
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     await expect
       .poll(() => page.locator('li[data-id="note-a"]').getAttribute("class"))
       .toContain("explored");
@@ -83,7 +83,7 @@ describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
   });
 
   it("dims the corresponding node and its outgoing particles on the graph page (REQ-EXPLORE-005)", async () => {
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
       .toBe("true");
@@ -97,7 +97,7 @@ describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
   });
 
   it("supports rewinding to a past state via the shared history panel, and returning to now (REQ-EXPLORE-003)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     // Seed two events so there's a genuine past state to rewind to,
     // distinct from the log's most recent event (which is "now" itself —
     // REQ-EXPLORE-009 — and must NOT behave like a rewind when selected).
@@ -153,7 +153,7 @@ describe("browser E2E: node exploration status (REQ-EXPLORE-001~005)", () => {
   });
 
   it("shows a dismissible warning instead of losing data when localStorage is full (REQ-EXPLORE-002)", async () => {
-    await page.goto(`${baseUrl}/notes/note-b.html`);
+    await page.goto(`${baseUrl}/notes/note-b/`);
 
     // Simulate a full quota by making any further writes throw, mirroring a
     // real QuotaExceededError, without needing to actually fill storage.
@@ -192,7 +192,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   const STORAGE_KEY = "enastro:exploration:v2";
 
   it("keeps the rewind panel open after returning to now, showing the cursor is back at 'now'", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await page.evaluate(
       ({ key }) => {
         const base = Date.now() - 60_000;
@@ -232,7 +232,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("highlights the history entry currently being viewed via rewind", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await page.evaluate(
       ({ key }) => {
         const base = Date.now() - 60_000;
@@ -280,7 +280,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("always shows a selectable 'Snapshot' entry at the end of the history list, resetting all notes to unread (REQ-EXPLORE-003)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await page.evaluate(
       ({ key }) => {
         localStorage.setItem(
@@ -325,7 +325,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
   it("shows a timestamp on the Snapshot's history row, present from the very first load (ADR-0014)", async () => {
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
 
     // Even with zero read/unread actions taken yet, the Snapshot row already
     // carries a timestamp — it's persisted eagerly on the very first load.
@@ -347,7 +347,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
 
   it("shows a read-at timestamp only while the note is read, doubling as the read/unread cue", async () => {
     await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
-    await page.goto(`${baseUrl}/notes/note-c-alias.html`);
+    await page.goto(`${baseUrl}/notes/note-c-alias/`);
 
     const markReadButton = page.locator("[data-mark-read]");
     const readAt = page.locator("[data-read-at]");
@@ -363,7 +363,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("notifies with the specific note id when a logged note no longer exists in the current build", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     await page.evaluate(
       ({ key }) => {
         localStorage.setItem(
@@ -390,7 +390,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("auto-reverts to unread and notifies with the specific note id when it changed after being marked read (REQ-EXPLORE-007)", async () => {
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     await page.evaluate(
       ({ key }) => {
         // A read event dated far in the past is guaranteed to predate the
@@ -430,7 +430,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("supports Reset to here, permanently discarding history after the cursor (REQ-EXPLORE-008)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await page.evaluate(
       ({ key }) => {
         // Timestamps are anchored to "now" (rather than tiny fixed numbers)
@@ -491,7 +491,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("supports Squash until here, folding read/unread history into the Snapshot (REQ-EXPLORE-008)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     const base = Date.now() - 60_000;
     await page.evaluate(
       ({ key, base }) => {
@@ -567,7 +567,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("supports Squash until here while live ('now'), folding the entire log into the Snapshot (REQ-EXPLORE-009)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await page.evaluate(
       ({ key }) => {
         const base = Date.now() - 60_000;
@@ -610,7 +610,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("persists the rewind cursor across page navigation, restoring the same highlighted history entry (REQ-EXPLORE-009)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await page.evaluate(
       ({ key }) => {
         const base = Date.now() - 60_000;
@@ -643,8 +643,8 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     // The History drawer's own open state is also persisted (it was opened
     // above), so it's already showing again — no need to click the toggle,
     // which would otherwise *close* an already-restored-open drawer.
-    await page.goto(`${baseUrl}/index.html`);
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     const historyEntriesAfterNav = page.locator("#exploration-history-list button");
     await expect.poll(() => historyEntriesAfterNav.count()).toBeGreaterThan(0);
     await expect.poll(() => historyEntriesAfterNav.nth(1).getAttribute("class")).toContain("active");
@@ -655,7 +655,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("persists the History drawer's open/closed state across page navigation (REQ-EXPLORE-009)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await page.evaluate((key) => localStorage.setItem(key, "closed"), DRAWER_STORAGE_KEY);
     await page.reload();
     const panel = page.locator("#exploration-rewind-panel");
@@ -664,17 +664,17 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     await page.click("#exploration-rewind-toggle");
     await expect.poll(() => panel.isVisible()).toBe(true);
 
-    await page.goto(`${baseUrl}/index.html`);
+    await page.goto(`${baseUrl}/`);
     await expect.poll(() => page.locator("#exploration-rewind-panel").isVisible()).toBe(true);
 
     await page.click("#exploration-rewind-toggle");
     await expect.poll(() => page.locator("#exploration-rewind-panel").isVisible()).toBe(false);
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await expect.poll(() => page.locator("#exploration-rewind-panel").isVisible()).toBe(false);
   });
 
   it("treats clicking the log's most recent History entry as 'now', not as a rewind (REQ-EXPLORE-009)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await page.evaluate(
       ({ key }) => {
         const base = Date.now() - 60_000;
@@ -714,12 +714,12 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("aligns the graph page's History drawer position with the All Notes/note pages (nav only, not the tag-filters row)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     await page.click("#exploration-rewind-toggle");
     const notePanelTop = await page.locator("#exploration-rewind-panel").evaluate((el) => el.getBoundingClientRect().top);
     await page.click("#exploration-rewind-toggle");
 
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
       .toBe("true");
@@ -734,7 +734,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
   });
 
   it("reflects a persisted rewound cursor on the graph page's initial load, not the live status (regression: getStatusSnapshot must resolve the persisted cursor, REQ-EXPLORE-009)", async () => {
-    await page.goto(`${baseUrl}/notes/note-a.html`);
+    await page.goto(`${baseUrl}/notes/note-a/`);
     const base = Date.now() - 60_000;
     await page.evaluate(
       ({ key, base }) => {
@@ -761,7 +761,7 @@ describe("browser E2E: exploration-status refinements (REQ-EXPLORE-007, REQ-EXPL
     await historyEntries.last().click();
     await expect.poll(() => historyEntries.last().getAttribute("class")).toContain("active");
 
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
       .toBe("true");

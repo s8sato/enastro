@@ -40,7 +40,7 @@ Graph IR の node/edge/backlink 構築（REQ-GRAPH-001〜003）と broken link �
 projection（REQ-PUB-001〜005）は `src/projection/**` で実装済み。
 
 artifact 生成（`src/build/site.ts`）と Markdown→HTML レンダリング（`src/render/**`）
-も実装済みで、この vault から `dist/index.html`, `dist/notes/<id>.html`,
+も実装済みで、この vault から `dist/index.html`, `dist/notes/<id>/index.html`,
 `dist/graph.json`, `dist/search-index.json` を生成できる（REQ-BUILD-001/002,
 REQ-CONTENT-007, REQ-UX-003/004）。検証内容:
 
@@ -57,7 +57,7 @@ REQ-CONTENT-007, REQ-UX-003/004）。検証内容:
 なお REQ-UX-001（全文検索）・REQ-UX-002（タグ検索/フィルタ）は `search-index.json`
 の生成に加え、クライアントサイドの検索・タグ絞り込み UI（`src/render/client/filter.mjs`,
 `src/render/client/search.mjs`, 依存なしの vanilla ESM）も実装済み。`renderIndexPage()`
-が `index.html` に検索ボックス・タグフィルタ領域・`data-id` 付きノート一覧・
+が `index.html` に検索ボックス・タグフィルタ領域・`data-id` 付きノート一覧・（変更なし、REQ-UX-015 の対象外）
 `<script type="module" src="assets/search.mjs">` を出力し、`buildSite()` が
 `dist/assets/` にこれらのクライアントアセットをコピーする。JavaScript 無効時は
 元のノート一覧がそのまま表示される（progressive enhancement）。検証内容:

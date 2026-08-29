@@ -47,7 +47,7 @@ afterEach(async () => {
 
 describe("browser E2E: graph particle direction toggle (REQ-UX-012)", () => {
   it("defaults to 'wikilink', with the particle departing from the referencing note (note-a) toward the referenced note (note-b)", async () => {
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
       .toBe("true");
@@ -63,7 +63,7 @@ describe("browser E2E: graph particle direction toggle (REQ-UX-012)", () => {
   });
 
   it("toggles to 'backlink', persists the choice, and flips the particle's departure node", async () => {
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
       .toBe("true");
@@ -98,17 +98,17 @@ describe("browser E2E: graph particle direction toggle (REQ-UX-012)", () => {
   });
 
   it("does not change the graph IR: backlinks/edges stay based on edge.source/edge.target regardless of the toggle", async () => {
-    await page.goto(`${baseUrl}/graph.html`);
+    await page.goto(`${baseUrl}/graph/`);
     await expect
       .poll(() => page.evaluate(() => (globalThis as any).document.body.dataset.graphInteractive))
       .toBe("true");
 
-    const graph = await page.evaluate(() => fetch("graph.json").then((r) => r.json()));
+    const graph = await page.evaluate(() => fetch("../graph.json").then((r) => r.json()));
     const edge = graph.edges.find((e: { source: string; target: string }) => e.source === "note-a" && e.target === "note-b");
     expect(edge).toBeTruthy();
 
     await page.locator("#particle-direction-toggle").click();
-    const graphAfterToggle = await page.evaluate(() => fetch("graph.json").then((r) => r.json()));
+    const graphAfterToggle = await page.evaluate(() => fetch("../graph.json").then((r) => r.json()));
     expect(graphAfterToggle).toEqual(graph);
   });
 });

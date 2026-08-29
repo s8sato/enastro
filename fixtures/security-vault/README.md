@@ -37,7 +37,7 @@
 render ループ以降、`src/render/render-note.ts` が `markdown-it`（`html: true`）で
 Markdown を HTML に変換した後、同じ `sanitizeHtml()` を適用する構成になった。
 `src/build/site.security.test.ts` はこの vault 全体を実際に `buildSite()` で
-build し、生成された `dist/notes/*.html` のいずれにも `<script>` タグ・`on*`
+build し、生成された `dist/notes/*/index.html` のいずれにも `<script>` タグ・`on*`
 イベントハンドラ属性・`javascript:` スキーム・`<svg>` 要素が残っていないことを
 artifact レベルで確認している（各ノートの説明文がこれらの語をバッククォート内の
 プレーンテキストとして言及すること自体は問題なく、正規表現は実行可能な攻撃構文

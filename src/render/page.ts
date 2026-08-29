@@ -16,7 +16,7 @@ export interface RenderSiteConfig {
    * when no theme is yet stored in `localStorage`. */
   defaultTheme: string;
   /** `enastro.config.json`'s `defaultParticleDirection` (default
-   * `"wikilink"`), used only on `graph.html`, and only when no direction is
+   * `"wikilink"`), used only on the graph page (`graph/`), and only when no direction is
    * yet stored in `localStorage`. */
   defaultParticleDirection: "wikilink" | "backlink";
 }
@@ -91,8 +91,9 @@ function renderNav(current: "index" | "note" | "graph", allNotesHref: string, gr
  * and inert. The trigger button that opens this drawer lives separately,
  * inside each page's `<nav>` — see `renderExplorationTrigger()`.
  *
- * `rootPrefix` is the relative path back to the site root (e.g. `"../"` for
- * note pages, `""` for index/graph pages) — needed so exploration.mjs can
+ * `rootPrefix` is the relative path back to the site root (e.g. `"../../"` for
+ * note pages, `"../"` for the graph page, `""` for the index page — depths
+ * per ADR-0018's clean URL structure) — needed so exploration.mjs can
  * fetch the already-public `search-index.json` (for ID-mismatch detection
  * and stale-read detection, REQ-EXPLORE-006/007) regardless of which page
  * kind it's running on.
@@ -175,14 +176,14 @@ export function renderNotePage(params: RenderNotePageParams): string {
     ? `<ul class="tags">${node.tags
         .map(
           (tag) =>
-            `<li><a href="../index.html?tags=${encodeURIComponent(tag)}">#${escapeHtml(tag)}</a></li>`,
+            `<li><a href="../../?tags=${encodeURIComponent(tag)}">#${escapeHtml(tag)}</a></li>`,
         )
         .join("")}</ul>`
     : "";
 
   const backlinksHtml = backlinks.length
     ? `<section class="backlinks"><h2>Backlinks</h2><ul>${backlinks
-        .map((b) => `<li><a href="${b.id}.html">${escapeHtml(b.title)}</a></li>`)
+        .map((b) => `<li><a href="../${b.id}/">${escapeHtml(b.title)}</a></li>`)
         .join("")}</ul></section>`
     : "";
 
@@ -200,21 +201,21 @@ export function renderNotePage(params: RenderNotePageParams): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(node.title)}</title>
-<link rel="stylesheet" href="../assets/site.css">
-<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="../../assets/site.css">
+<link rel="stylesheet" href="../../assets/katex/katex.min.css">
 ${themeFoucScript(siteConfig.defaultTheme)}
 </head>
 <body>
-${renderNav("note", "../index.html", `../graph.html?focus=${encodeURIComponent(node.id)}`)}
-${renderExplorationBar("../assets/", "../")}
-${renderThemeSwitcher("../assets/")}
+${renderNav("note", "../../", `../../graph/?focus=${encodeURIComponent(node.id)}`)}
+${renderExplorationBar("../../assets/", "../../")}
+${renderThemeSwitcher("../../assets/")}
 <p class="note-id"><code>${escapeHtml(node.id)}</code> <button type="button" class="copy-id" data-copy="${escapeHtml(node.id)}">Copy ID</button><span class="copy-id-feedback" aria-live="polite"></span> <button type="button" class="mark-read-button" data-mark-read="${escapeHtml(node.id)}" title="Mark as read" hidden>Mark as read</button></p>
 <p class="note-dates">${updatedHtml}<span class="date-sep" data-read-sep hidden>·</span><span class="date-group" data-read-at hidden><span class="date-label">Read</span> <span class="date-value" data-read-value></span></span><span class="date-tz" data-tz></span></p>
 ${tagsHtml}
 <article>${bodyHtml}</article>
 ${backlinksHtml}
-<script type="module" src="../assets/copy-id.mjs"></script>
-<script type="module" src="../assets/local-time.mjs"></script>
+<script type="module" src="../../assets/copy-id.mjs"></script>
+<script type="module" src="../../assets/local-time.mjs"></script>
 </body>
 </html>
 `;
@@ -231,7 +232,7 @@ export function renderIndexPage(nodes: PublicNode[], siteConfig: RenderSiteConfi
   const items = nodes
     .map(
       (node) =>
-        `<li data-id="${escapeHtml(node.id)}"><a href="notes/${node.id}.html">${escapeHtml(node.title)}</a></li>`,
+        `<li data-id="${escapeHtml(node.id)}"><a href="notes/${node.id}/">${escapeHtml(node.title)}</a></li>`,
     )
     .join("");
   const siteTitle = escapeHtml(siteConfig.siteTitle);
@@ -246,7 +247,7 @@ export function renderIndexPage(nodes: PublicNode[], siteConfig: RenderSiteConfi
 ${themeFoucScript(siteConfig.defaultTheme)}
 </head>
 <body>
-${renderNav("index", "index.html", "graph.html")}
+${renderNav("index", "./", "graph/")}
 ${renderExplorationBar("assets/", "")}
 ${renderThemeSwitcher("assets/")}
 <header class="index-header">
@@ -281,20 +282,20 @@ export function renderGraphPage(siteConfig: RenderSiteConfig): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(siteConfig.siteTitle)} · Graph view</title>
-<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="../assets/site.css">
 ${themeFoucScript(siteConfig.defaultTheme)}
 </head>
 <body class="graph-shell">
 <div class="graph-header">
-${renderNav("graph", "index.html", "graph.html")}
+${renderNav("graph", "../", "./")}
 <div id="tag-filters"></div>
 </div>
 <button type="button" id="particle-direction-toggle" data-default-direction="${escapeHtml(siteConfig.defaultParticleDirection)}" hidden></button>
-${renderExplorationBar("assets/", "")}
-${renderThemeSwitcher("assets/")}
+${renderExplorationBar("../assets/", "../")}
+${renderThemeSwitcher("../assets/")}
 <div id="graph-canvas-container"></div>
 <p id="graph-status" class="graph-status" role="status"></p>
-<script type="module" src="assets/graph-view.mjs"></script>
+<script type="module" src="../assets/graph-view.mjs"></script>
 </body>
 </html>
 `;

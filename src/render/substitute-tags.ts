@@ -19,7 +19,7 @@ export function substituteInlineTags(body: string): string {
       }
 
       return segment.text.replace(INLINE_TAG_PATTERN, (_match, prefix: string, tag: string) => {
-        return `${prefix}[#${tag}](../index.html?tags=${encodeURIComponent(tag)})`;
+        return `${prefix}[#${tag}](../../?tags=${encodeURIComponent(tag)})`;
       });
     })
     .join("");

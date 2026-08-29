@@ -114,13 +114,14 @@ minimal Markdown vault
 | REQ-UX-004 | 出力は静的ホスティング可能でサーバーサイド runtime 不要な portable artifact である **MUST**。 | DECIDED |
 | REQ-UX-005 | v0.1 の主画面はノート/ドキュメントビューであり、Graph UI は主画面にしない。長期的には Graph UI を主画面に据える方針。 | DECIDED（方向性）/ OPEN（詳細 UX） |
 | REQ-UX-006 | ノートページには一覧ページ（`index.html`）へのナビゲーションリンクを常に表示する **SHOULD**。 | DECIDED |
+| REQ-UX-015 | 出力される全ページ URL は拡張子を持たないディレクトリ形式（`<name>/`）とする。ルートの `index.html` のみ例外的にサイトルート `./` として扱う **SHOULD**（[ADR-0018](../decisions/ADR-0018-clean-url-output-structure.md)）。 | DECIDED |
 | REQ-UX-007 | ノートページには ID の近くに最終更新日時（そのファイルを最後に変更した git コミットの日時。git 情報が得られない場合は「不明」として扱い非表示・検索対象外とする。mtime へのフォールバックは行わない、[ADR-0015](../decisions/ADR-0015-note-modified-at-source.md)）を表示し、検索対象に含める **SHOULD**。ビルドの決定性（REQ-BUILD-001）を保つため、静的 HTML には UTC 表示をフォールバックとして埋め込み、閲覧者のブラウザ上で JavaScript により閲覧者のローカルタイムゾーンでの表示に強化する。作成日時は取得元の信頼性の問題（filesystem birthtime の非対応・git checkout によるリセット）から v0.1 では対象外とする。 | DECIDED |
 | REQ-UX-008 | ノートページの `#tag` はリンクとして表示され、クリックすると一覧ページ（`index.html`）の対応するタグでフィルタされた表示に遷移する **SHOULD**。 | DECIDED |
-| REQ-UX-009 | Graph UI ページ（`graph.html`）をノート一覧・ノートページから相互にリンクできる副画面として提供する **MUST**（[ADR-0011](../decisions/ADR-0011-graph-ui-placement.md)）。 | DECIDED |
+| REQ-UX-009 | Graph UI ページ（`graph/`）をノート一覧・ノートページから相互にリンクできる副画面として提供する **MUST**（[ADR-0011](../decisions/ADR-0011-graph-ui-placement.md)）。 | DECIDED |
 | REQ-UX-010 | 出力は PC・モバイル両方でレスポンシブなレイアウトを提供し、Graph UI は touch による pan/zoom 操作をサポートする **MUST**。WCAG 準拠等の包括的 accessibility 対応は対象外（引き続き DEFERRED）。 | DECIDED |
 | REQ-UX-011 | 出力は12種のカラーテーマをクライアント完結で切り替え可能とする **SHOULD**。テーマ選択は `localStorage` にのみ保存され、index/note/graph の3ページ間で一貫する。初回訪問時（`localStorage` に選択が保存されていない時）の初期テーマは `enastro.config.json` の `defaultTheme`（未指定時 `moon`、[ADR-0016](../decisions/ADR-0016-vault-config-driven-site-defaults.md)）で vault ごとに指定できるが、ユーザーが一度でも明示的に選択したテーマは常にそれより優先される。ビルドはこの初期値注入以外の点で特定テーマに依存しない(REQ-BUILD-001 と整合し、REQ-UX-004 のポータビリティを維持する)。既存の探索ステータス機能([ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md))と同様、ユーザーの選択自体の永続化は client-only の `localStorage` 完結パターンを踏襲し、ビルド成果物には一切書き込まない。 | DECIDED |
 | REQ-UX-012 | Graph UI ページ（`graph.html`）は edge 上のエネルギー粒子の進行方向をトグルで切り替え可能とする **SHOULD**（[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md) が PROPOSED として残した粒子方向パラメータの具体化）。既定値は「wikilink」の方向（`edge.source` → `edge.target`、REQ-GRAPH-002 の directed edge と一致）とし、代替として「backlink」（参照先＝依存先ノートから参照元＝依存元ノートへ、知識の積み上げ方向）を選べる。初回訪問時の初期方向は `enastro.config.json` の `defaultParticleDirection`（未指定時 `wikilink`、[ADR-0016](../decisions/ADR-0016-vault-config-driven-site-defaults.md)）で vault ごとに指定できるが、ユーザーが一度でも明示的に選択した方向は常にそれより優先される。設定は `localStorage` にのみ保存され、graph ページのみに閉じる（index/note ページには表示しない）。graph IR の `edge.source`/`edge.target`・backlink（REQ-GRAPH-002/003）はどちらの設定でも一切変更されない。REQ-EXPLORE-005 の「探索済みノートの発射粒子を減光する」判定は、その時点で選択中の方向における実際の粒子発射元ノードに追従する。 | DECIDED |
-| REQ-UX-013 | 出力サイトのタイトルは `enastro.config.json` の `siteTitle`（未指定時 `Notes`、[ADR-0016](../decisions/ADR-0016-vault-config-driven-site-defaults.md)）で vault ごとに指定できる **SHOULD**。`index.html` の `<title>` と見出し（`<h1>`）の両方、および `graph.html` の `<title>`（`{siteTitle} · Graph view`）に反映される。note ページ（`notes/{id}.html`）の `<title>` はノート自身のタイトルのままとし、対象外とする。 | DECIDED |
+| REQ-UX-013 | 出力サイトのタイトルは `enastro.config.json` の `siteTitle`（未指定時 `Notes`、[ADR-0016](../decisions/ADR-0016-vault-config-driven-site-defaults.md)）で vault ごとに指定できる **SHOULD**。`index.html` の `<title>` と見出し（`<h1>`）の両方、および `graph/` の `<title>`（`{siteTitle} · Graph view`）に反映される。note ページ（`notes/{id}/`）の `<title>` はノート自身のタイトルのままとし、対象外とする。 | DECIDED |
 | REQ-UX-014 | ノート本文中の外部リンク（`http`/`https` の絶対 URL）は新しいタブで開く（`target="_blank"` `rel="noopener noreferrer"`）**SHOULD**。内部リンク（wikilink 解決済みノート、`#tag` リンク、attachment）は現在のタブ内で遷移する（変更しない）。 | DECIDED |
 
 ### 4.5 SEC
@@ -224,6 +225,7 @@ minimal Markdown vault
 | 03: サイトタイトルの vault ごとの指定 | REQ-UX-013 | ADR-0016 | 09 §2.6 | fixtures/basic-vault |
 | 03: 数式（KaTeX）レンダリング | REQ-CONTENT-010 | ADR-0017 | 09 §2.1 | fixtures/demo-vault |
 | 04: 外部リンクを新しいタブで開く | REQ-UX-014 | (render 実装) | 09 §2.5 | fixtures/demo-vault |
+| 04: クリーンURL（拡張子なしディレクトリ形式） | REQ-UX-015 | ADR-0018 | 09 §2.5 | fixtures/basic-vault |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
 本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。

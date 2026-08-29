@@ -20,7 +20,16 @@ const CONTENT_TYPES: Record<string, string> = {
 export function serveStatic(rootDir: string): Promise<{ server: Server; baseUrl: string }> {
   const server = createServer((req, res) => {
     const requestPath = decodeURIComponent((req.url ?? "/").split("?")[0] ?? "/");
-    const filePath = path.join(rootDir, requestPath);
+    let filePath = path.join(rootDir, requestPath);
+
+    // Clean URL resolution (ADR-0018): a directory request (e.g. "/",
+    // "/graph/", "/notes/note-a/") resolves to that directory's
+    // index.html, mirroring GitHub Pages / `npx http-server` default
+    // behavior — this project's own build output no longer writes
+    // "<name>.html" files for anything but the root.
+    if (existsSync(filePath) && statSync(filePath).isDirectory()) {
+      filePath = path.join(filePath, "index.html");
+    }
 
     if (!filePath.startsWith(rootDir) || !existsSync(filePath) || !statSync(filePath).isFile()) {
       res.writeHead(404);

@@ -73,7 +73,10 @@ export function substituteLinks(
             // for writing/resolving links, the title is for displaying them
             // (ADR-0009).
             const noteLabel = display ?? titleById.get(noteResult.nodeId) ?? label;
-            return `[${noteLabel}](${noteResult.nodeId}.html)`;
+            // Note pages live at notes/<id>/index.html (ADR-0018), so a
+            // sibling note link goes up one level then into the target's
+            // own directory.
+            return `[${noteLabel}](../${noteResult.nodeId}/)`;
           }
 
           removedTargets.push(target);
@@ -83,7 +86,7 @@ export function substituteLinks(
         const attachmentResult = resolveAttachmentTarget(target, attachmentIndex);
         if (attachmentResult.status === "resolved") {
           if (publishedAttachmentIds.has(attachmentResult.attachmentId)) {
-            const href = `../${attachmentResult.attachmentId}`;
+            const href = `../../${attachmentResult.attachmentId}`;
             return isEmbed ? `![${label}](${href})` : `[${label}](${href})`;
           }
 
