@@ -3,6 +3,29 @@
 本プロジェクトのバージョンは [Semantic Versioning](https://semver.org/lang/ja/) に準拠する。
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) を参考にする。
 
+## [0.3.4] - 2026-08-31
+
+### 追加
+
+- **外部リンクを新しいタブで開く**: ノート本文中の http(s) 絶対 URL リンクにのみ
+  `target="_blank"` `rel="noopener noreferrer"` を付与する。相対リンク（wikilink 解決済み
+  ノート・`#tag` リンク・添付ファイル）は現在のタブ内での遷移のまま変更しない
+  （REQ-UX-014）。
+
+### 変更
+
+- **出力 URL を拡張子なしのクリーン URL に変更（破壊的変更）**: `notes/<id>.html` を
+  `notes/<id>/index.html` に、`graph.html` を `graph/index.html` に変更し、全ページ
+  URL を拡張子を持たないディレクトリ形式（`<name>/`）に統一した（ルートの
+  `index.html` のみ `./` として例外）。旧 `*.html` URL への後方互換は提供しない
+  （REQ-UX-015、[ADR-0018](decisions/ADR-0018-clean-url-output-structure.md)）。
+
+### 修正
+
+- **History ドロワーで長い note ID による横スクロール**: `#exploration-history-list`
+  に `grid-template-columns: minmax(0, 1fr)` を追加し、既存の `text-overflow: ellipsis`
+  が正しく機能するよう修正した。
+
 ## [0.3.3] - 2026-08-28
 
 ### 修正
