@@ -30,6 +30,9 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 | REQ-CONTENT-007 | unit test（broken link で build が失敗しないこと） | basic-vault |
 | REQ-CONTENT-008 | unit test + golden test（日本語ファイル名の解決） | compatibility-vault |
 | REQ-CONTENT-010 | unit test（inline/block 数式のレンダリング、コードスパン非干渉、不正 LaTeX のフォールバック、trust:false の安全性） | demo-vault (markdown-showcase.md) |
+| REQ-CONTENT-011 | unit test + human review（mermaid ダイアグラムの描画確認）※実現方式は ADR 確定後に検証方法を具体化 | demo-vault (markdown-showcase.md) |
+| REQ-CONTENT-012 | unit test（`<details>`/`<summary>` がサニタイズ後も残ること） | demo-vault (markdown-showcase.md) |
+| REQ-CONTENT-013 | unit test（callout 種別ごとの見た目・class 付与） | demo-vault (markdown-showcase.md) |
 | REQ-GRAPH-002, 003 | unit test（edge/backlink の生成） | basic-vault |
 
 ### 2.2 privacy / security
@@ -87,6 +90,10 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 | REQ-UX-012 | unit test（`src/render/client/particle-direction.test.ts`、方向トグルのロジック・backlink/edge データの不変性）+ unit test（`src/vault/config.test.ts`、`defaultParticleDirection` のバリデーション）+ browser E2E test（`src/e2e/particle-direction.e2e.test.ts`、トグル操作と粒子発射元の切り替わり・既定値、`src/e2e/site-config.e2e.test.ts`、`defaultParticleDirection` の初回訪問時反映） | demo-vault, benchmark-vault |
 | REQ-UX-013 | unit test（`src/vault/config.test.ts`、`siteTitle` のバリデーション）+ browser E2E test（`src/e2e/site-config.e2e.test.ts`、`index.html`/`graph.html` の `<title>`/`<h1>` への反映） | basic-vault |
 | REQ-UX-014 | unit test（`src/render/external-links.test.ts`、http(s) URL のみに `target`/`rel` が付与されること、相対リンク・mailto は不変） | demo-vault |
+| REQ-UX-016 | unit test（行番号表示のCSS/マークアップ生成） | basic-vault |
+| REQ-UX-017 | unit test（`lang` 情報の言語ラベルへの反映） | basic-vault |
+| REQ-UX-018 | unit test + browser E2E test（コピーボタン押下でクリップボードへコード本文のみが渡ること、フィードバック表示） | basic-vault |
+| REQ-UX-019 | browser E2E test（検索→ノート遷移後の検索語ハイライト） | basic-vault |
 
 ## 3. 引き続き自動検証を実施しない項目 [DEFERRED]
 

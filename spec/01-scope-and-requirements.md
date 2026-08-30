@@ -53,6 +53,28 @@ minimal Markdown vault
 - REQ-OPS-001〜003（新設、§4.8）: CI による typecheck/test 実行、デモサイトの GitHub Pages 自動公開、
   エンドユーザー向け再利用可能な公開 workflow テンプレートの提供。
 
+### 3.2 v0.3.x 時点で未実装・未確定の要求の整理 [PROPOSED]
+
+v0.3.3（本書改訂時点の最新リリース）における、未実装または未確定の要求を整理する。
+
+**引き続き DEFERRED（§3 参照、変更なし）**: REQ-PUB-008（private → CI → public repo の自動公開パイプライン）、
+非 Obsidian 入力形式への対応、複数 vault の同時対応、VS Code 拡張、WCAG 準拠等の包括的 accessibility 対応。
+
+**詳細未確定の OPEN（既存、変更なし）**: REQ-CONTENT-006（alias 同士の衝突時の挙動）、
+REQ-UX-005（Graph UI を主画面に据える際の詳細 UX）。
+
+**新規 PROPOSED（本改訂で新設、いずれも v0.4 候補）**: 下記の7件。要求自体はユーザー承認済みだが、
+実現方式の詳細（特に REQ-CONTENT-011 の描画方式）は未確定であり、実装着手前に必要に応じて ADR を作成する。
+
+- REQ-CONTENT-011: mermaid ダイアグラムの描画（`fixtures/demo-vault/markdown-showcase.md` の
+  「封印された奥義」節が未対応として言及する3項目の一つ）。
+- REQ-CONTENT-012: `<details>`/`<summary>` の許可（同上）。
+- REQ-CONTENT-013: `:::note info` / `:::note warn` / `:::note alert` callout 構文の解釈（同上）。
+- REQ-UX-016: コードブロックの行番号表示。
+- REQ-UX-017: コードブロックの言語ラベル表示。
+- REQ-UX-018: コードブロックのコピー ボタン。
+- REQ-UX-019: 検索語のノート詳細ページ遷移後ハイライト表示。
+
 ## 4. Requirement 一覧
 
 要件 ID は `REQ-<AREA>-<3桁連番>` とする。AREA は以下を用いる。
@@ -93,6 +115,9 @@ minimal Markdown vault
 | REQ-CONTENT-008 | 日本語ファイル名・Unicode を含むノート名を正しく解決 **MUST**。 | DECIDED |
 | REQ-CONTENT-009 | ノートの ID はファイル名（拡張子を除いたもの、NFC 正規化）とし、vault 内で一意でなければならない **MUST**。ID の衝突は build を失敗させる **MUST**。ノートのタイトルは本文中の最初の第一レベル見出しとし、存在しない場合は ID をタイトルとして使う **MUST**。frontmatter の `title` は無視され、警告として記録される（build error にはしない）**MUST**（[ADR-0009](../decisions/ADR-0009-note-id-title-separation.md)、02-content-semantics.md §2.1, §2.4 参照）。 | DECIDED |
 | REQ-CONTENT-010 | パーサーは `$...$`（インライン）・`$$...$$`（ブロック）を KaTeX 数式としてビルド時に server-side レンダリングする **MUST**。不正な LaTeX は build を失敗させず KaTeX 自身のエラー表示にフォールバックする **MUST**。`\(...\)`/`\[...\]` は非対応（[ADR-0017](../decisions/ADR-0017-math-rendering.md)、02-content-semantics.md §1.1 参照）。 | DECIDED |
+| REQ-CONTENT-011 | パーサーは `mermaid` fenced code block（`​```mermaid`）をダイアグラムとして描画する **SHOULD**。描画方式（build-time server-side か browser client-side か）・sanitize 方針は未定で、実装着手前に ADR で確定する（v0.4 候補）。 | PROPOSED |
+| REQ-CONTENT-012 | `<details>`/`<summary>` をサニタイズ allowlist に追加し、開閉可能なブロックとして通す **SHOULD**（v0.4 候補）。 | PROPOSED |
+| REQ-CONTENT-013 | `:::note info` / `:::note warn` / `:::note alert` の callout コンテナ構文を解釈し、種別に応じた見た目で表示する **SHOULD**（v0.4 候補）。 | PROPOSED |
 
 ### 4.3 GRAPH
 
@@ -123,6 +148,10 @@ minimal Markdown vault
 | REQ-UX-012 | Graph UI ページ（`graph.html`）は edge 上のエネルギー粒子の進行方向をトグルで切り替え可能とする **SHOULD**（[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md) が PROPOSED として残した粒子方向パラメータの具体化）。既定値は「wikilink」の方向（`edge.source` → `edge.target`、REQ-GRAPH-002 の directed edge と一致）とし、代替として「backlink」（参照先＝依存先ノートから参照元＝依存元ノートへ、知識の積み上げ方向）を選べる。初回訪問時の初期方向は `enastro.config.json` の `defaultParticleDirection`（未指定時 `wikilink`、[ADR-0016](../decisions/ADR-0016-vault-config-driven-site-defaults.md)）で vault ごとに指定できるが、ユーザーが一度でも明示的に選択した方向は常にそれより優先される。設定は `localStorage` にのみ保存され、graph ページのみに閉じる（index/note ページには表示しない）。graph IR の `edge.source`/`edge.target`・backlink（REQ-GRAPH-002/003）はどちらの設定でも一切変更されない。REQ-EXPLORE-005 の「探索済みノートの発射粒子を減光する」判定は、その時点で選択中の方向における実際の粒子発射元ノードに追従する。 | DECIDED |
 | REQ-UX-013 | 出力サイトのタイトルは `enastro.config.json` の `siteTitle`（未指定時 `Notes`、[ADR-0016](../decisions/ADR-0016-vault-config-driven-site-defaults.md)）で vault ごとに指定できる **SHOULD**。`index.html` の `<title>` と見出し（`<h1>`）の両方、および `graph/` の `<title>`（`{siteTitle} · Graph view`）に反映される。note ページ（`notes/{id}/`）の `<title>` はノート自身のタイトルのままとし、対象外とする。 | DECIDED |
 | REQ-UX-014 | ノート本文中の外部リンク（`http`/`https` の絶対 URL）は新しいタブで開く（`target="_blank"` `rel="noopener noreferrer"`）**SHOULD**。内部リンク（wikilink 解決済みノート、`#tag` リンク、attachment）は現在のタブ内で遷移する（変更しない）。 | DECIDED |
+| REQ-UX-016 | コードブロックに行番号を表示する **SHOULD**（v0.4 候補）。 | PROPOSED |
+| REQ-UX-017 | コードブロックに言語ラベルを表示する **SHOULD**（build時の `hljs.highlight()` に渡す `lang` をそのまま表示に用いる、v0.4 候補）。 | PROPOSED |
+| REQ-UX-018 | コードブロック右上にクリップボードへコピーするボタンを表示する **SHOULD**。コピー対象は行番号を含まないコード本文のみとする（v0.4 候補）。 | PROPOSED |
+| REQ-UX-019 | All notes ページの検索結果からノート詳細ページへ遷移した後も、検索語がノート本文中にハイライト表示される **SHOULD**（v0.4 候補）。 | PROPOSED |
 
 ### 4.5 SEC
 
@@ -226,6 +255,15 @@ minimal Markdown vault
 | 03: 数式（KaTeX）レンダリング | REQ-CONTENT-010 | ADR-0017 | 09 §2.1 | fixtures/demo-vault |
 | 04: 外部リンクを新しいタブで開く | REQ-UX-014 | (render 実装) | 09 §2.5 | fixtures/demo-vault |
 | 04: クリーンURL（拡張子なしディレクトリ形式） | REQ-UX-015 | ADR-0018 | 09 §2.5 | fixtures/basic-vault |
+| 05: mermaid ダイアグラム描画 | REQ-CONTENT-011 | OPEN（要 ADR） | 09 §2.1 | fixtures/demo-vault (markdown-showcase.md) |
+| 05: `<details>`/`<summary>` の許可 | REQ-CONTENT-012 | (sanitize 実装) | 09 §2.1 | fixtures/demo-vault (markdown-showcase.md) |
+| 05: callout コンテナ構文 | REQ-CONTENT-013 | (parser/render 実装) | 09 §2.1 | fixtures/demo-vault (markdown-showcase.md) |
+| 05: コードブロック行番号表示 | REQ-UX-016 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
+| 05: コードブロック言語ラベル表示 | REQ-UX-017 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
+| 05: コードブロックコピーボタン | REQ-UX-018 | (render/client 実装) | 09 §2.5 | fixtures/basic-vault |
+| 05: 検索語のノート遷移後ハイライト | REQ-UX-019 | (render/client 実装) | 09 §2.5 | fixtures/basic-vault |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
-本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。
+本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。PROPOSED な REQ（REQ-CONTENT-011〜013、
+REQ-UX-016〜019）は§3.2で一覧化しているが、承認・設計確定前の段階でも traceability の追跡漏れを防ぐため
+本表にも掲載する。
