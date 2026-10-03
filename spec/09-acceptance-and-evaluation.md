@@ -94,7 +94,7 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 | REQ-UX-016 | unit test（行番号表示のCSS/マークアップ生成） | basic-vault |
 | REQ-UX-017 | unit test（`lang` 情報の言語ラベルへの反映） | basic-vault |
 | REQ-UX-018 | unit test + browser E2E test（コピーボタン押下でクリップボードへコード本文のみが渡ること、フィードバック表示） | basic-vault |
-| REQ-UX-019 | browser E2E test（検索→ノート遷移後の検索語ハイライト） | basic-vault |
+| REQ-UX-019 | unit test（`src/render/client/highlight.test.ts`、フラグメントの生成・解析と一致範囲の算出）+ unit test（`src/build/site.search-ui.test.ts`、ノートページへの script 追加とビルド出力に `<mark>` が含まれないこと）+ browser E2E test（`src/e2e/search-ui.e2e.test.ts`、検索→ノート遷移後のハイライト・wikilink 遷移先へ引き継がないこと・細工したフラグメントでマークアップが注入されないこと）+ human review（各テーマでのハイライトの見え方） | basic-vault |
 
 ## 3. 引き続き自動検証を実施しない項目 [DEFERRED]
 

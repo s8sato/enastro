@@ -73,7 +73,7 @@ REQ-UX-005（Graph UI を主画面に据える際の詳細 UX）。
 - REQ-UX-016: コードブロックの行番号表示。
 - REQ-UX-017: コードブロックの言語ラベル表示。
 - REQ-UX-018: コードブロックのコピー ボタン。
-- REQ-UX-019: 検索語のノート詳細ページ遷移後ハイライト表示。
+- REQ-UX-019: 検索語のノート詳細ページ遷移後ハイライト表示（[ADR-0019](../decisions/ADR-0019-search-term-highlight-on-note-navigation.md) で実現方式を提案済み）。
 
 ## 4. Requirement 一覧
 
@@ -151,7 +151,7 @@ REQ-UX-005（Graph UI を主画面に据える際の詳細 UX）。
 | REQ-UX-016 | コードブロックに行番号を表示する **SHOULD**（v0.4 候補）。 | PROPOSED |
 | REQ-UX-017 | コードブロックに言語ラベルを表示する **SHOULD**（build時の `hljs.highlight()` に渡す `lang` をそのまま表示に用いる、v0.4 候補）。 | PROPOSED |
 | REQ-UX-018 | コードブロック右上にクリップボードへコピーするボタンを表示する **SHOULD**。コピー対象は行番号を含まないコード本文のみとする（v0.4 候補）。 | PROPOSED |
-| REQ-UX-019 | All notes ページの検索結果からノート詳細ページへ遷移した後も、検索語がノート本文中にハイライト表示される **SHOULD**（v0.4 候補）。 | PROPOSED |
+| REQ-UX-019 | All notes ページの検索結果からノート詳細ページへ遷移した後も、検索語がノート本文中にハイライト表示される **SHOULD**（v0.4 候補）。検索語は URL フラグメント（`#hl=`）でのみ受け渡し、照合規則は検索と同一とする。コードブロック・数式は対象外とし、最初の一致へスクロールする（[ADR-0019](../decisions/ADR-0019-search-term-highlight-on-note-navigation.md)）。 | PROPOSED |
 
 ### 4.5 SEC
 
@@ -261,7 +261,7 @@ REQ-UX-005（Graph UI を主画面に据える際の詳細 UX）。
 | 05: コードブロック行番号表示 | REQ-UX-016 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
 | 05: コードブロック言語ラベル表示 | REQ-UX-017 | (render 実装) | 09 §2.5 | fixtures/basic-vault |
 | 05: コードブロックコピーボタン | REQ-UX-018 | (render/client 実装) | 09 §2.5 | fixtures/basic-vault |
-| 05: 検索語のノート遷移後ハイライト | REQ-UX-019 | (render/client 実装) | 09 §2.5 | fixtures/basic-vault |
+| 05: 検索語のノート遷移後ハイライト | REQ-UX-019 | ADR-0019 | 09 §2.5 | fixtures/basic-vault |
 
 DEFERRED な REQ（REQ-PUB-008、非 Obsidian 対応、複数 vault 対応、VS Code 拡張、WCAG accessibility 等）は
 本表に含めず、§3（v0.1 から明示的に除外する機能）の表で管理する。PROPOSED な REQ（REQ-CONTENT-011〜013、

@@ -39,4 +39,5 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 
 - 「探索ステータス」（ノートごとの既読/未読、REQ-EXPLORE-001〜006、[ADR-0014](../decisions/ADR-0014-node-exploration-status-persistence.md)）は、閲覧者のブラウザの `localStorage` にのみ保存されるクライアント完結の状態であり、build 時にもサーバー側にも一切送信・保存されない。
 - この状態は `graph.json` / `search-index.json` / 生成 HTML を含むいかなる公開 artifact にも書き込まれない（REQ-EXPLORE-006）。privacy invariant（§1）は非公開ノートの漏洩を対象としており、この探索ステータス機能は同invariant に抵触しないことを、既存の privacy scan（§4）と同種の考え方で確認する。
+- 検索語ハイライト（REQ-UX-019、[ADR-0019](../decisions/ADR-0019-search-term-highlight-on-note-navigation.md)）の検索語は URL フラグメント（`#hl=`）にのみ載る。フラグメントはサーバーへ送信されず、検索語は公開 artifact にもストレージにも書き込まれない。ハイライトは DOM API のみで行い、フラグメントの内容をマークアップとして解釈しない。
 

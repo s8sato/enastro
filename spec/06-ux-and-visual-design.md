@@ -19,6 +19,7 @@ Status legend は [00-product-vision.md](00-product-vision.md) 参照。
 
 - Graph UI（WebGL レンダラー・星表現・edge 上のエネルギー粒子表現、[ADR-0010](../decisions/ADR-0010-graph-ui-rendering-strategy.md)）
 - レスポンシブレイアウト + touch による pan/zoom 操作（REQ-UX-010）。WCAG 準拠等の包括的 accessibility 対応は対象外のまま。
+- 検索結果から遷移したノート詳細ページでの検索語ハイライト（REQ-UX-019、PROPOSED、[ADR-0019](../decisions/ADR-0019-search-term-highlight-on-note-navigation.md)）。ハイライト色は各テーマの `--accent` から導出する。
 
 ## 3. Graph UI の視覚・interaction 仕様 [DECIDED（方針）/ PROPOSED（詳細パラメータ）]
 

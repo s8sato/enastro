@@ -23,6 +23,7 @@ dist/
     ├── site.css
     ├── graph-view.mjs     # Graph UI クライアントスクリプト（v0.2）
     ├── pixi.min.mjs       # vendored WebGL レンダラー（v0.2, ADR-0010）
+    ├── highlight.mjs      # ノートページでの検索語ハイライト（REQ-UX-019, ADR-0019）
     └── ...（search.mjs 等、既存のクライアントスクリプト）
 ```
 
