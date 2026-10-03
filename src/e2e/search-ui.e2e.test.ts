@@ -115,6 +115,87 @@ describe("browser E2E: search & tag filter & backlink navigation (REQ-UX-001/002
   });
 });
 
+describe("browser E2E: search-term highlighting after navigation (REQ-UX-019)", () => {
+  const markTexts = () => page.locator("article mark.search-hit").allTextContents();
+
+  async function searchAndOpen(query: string, id: string) {
+    await page.goto(`${baseUrl}/`);
+    await page.waitForSelector("#tag-filters button");
+    await page.fill("#search-box", query);
+    await page.click(`li[data-id="${id}"] a`);
+    await expect.poll(() => page.url()).toContain(`/notes/${id}/#hl=`);
+  }
+
+  it("highlights the search term in the note body after clicking a search result", async () => {
+    await searchAndOpen("inline-tag", "note-a");
+
+    await expect.poll(markTexts).toEqual(["inline-tag"]);
+  });
+
+  it("highlights every term of a multi-word query, case-insensitively", async () => {
+    await searchAndOpen("NOTE links", "note-a");
+
+    await expect.poll(async () => new Set((await markTexts()).map((text) => text.toLowerCase()))).toEqual(
+      new Set(["note", "links"]),
+    );
+    // Wrapping matches in <mark> leaves the text itself unchanged.
+    await expect.poll(() => page.locator("article h1").textContent()).toBe("Note A");
+  });
+
+  it("does not carry the highlight over to a note reached via a wikilink", async () => {
+    await searchAndOpen("note", "note-a");
+    await expect.poll(async () => (await markTexts()).length).toBeGreaterThan(0);
+
+    await page.click('article a:has-text("Note B")');
+
+    await expect.poll(() => page.url()).toMatch(/\/notes\/note-b\/$/);
+    await expect.poll(() => page.locator("article h1").textContent()).toBe("Note B");
+    expect(await markTexts()).toEqual([]);
+  });
+
+  it("leaves result links without a fragment when the search box is empty", async () => {
+    await page.goto(`${baseUrl}/`);
+    await page.waitForSelector("#tag-filters button");
+    await page.fill("#search-box", "note");
+    await page.fill("#search-box", "   ");
+
+    await expect
+      .poll(() => page.locator('li[data-id="note-a"] a').getAttribute("href"))
+      .toBe("notes/note-a/");
+  });
+
+  it("highlights nothing when a note page is opened directly", async () => {
+    await page.goto(`${baseUrl}/notes/note-a/`);
+    await page.waitForSelector("article h1");
+
+    expect(await markTexts()).toEqual([]);
+  });
+
+  it("treats a crafted fragment as plain text (no markup injection, no script errors)", async () => {
+    const freshPage = await browser.newPage();
+    const dialogs: string[] = [];
+    const errors: string[] = [];
+    freshPage.on("dialog", (dialog) => {
+      dialogs.push(dialog.message());
+      void dialog.dismiss();
+    });
+    freshPage.on("pageerror", (error) => errors.push(error.message));
+    try {
+      const query = '<img src=x onerror=alert(1)> ( .* note';
+      await freshPage.goto(`${baseUrl}/notes/note-a/#hl=${encodeURIComponent(query)}`);
+
+      await expect
+        .poll(() => freshPage.locator("article mark.search-hit").count())
+        .toBeGreaterThan(0);
+      expect(await freshPage.locator("article img").count()).toBe(0);
+      expect(dialogs).toEqual([]);
+      expect(errors).toEqual([]);
+    } finally {
+      await freshPage.close();
+    }
+  });
+});
+
 describe("browser E2E: local-timezone last-modified display (REQ-UX-007)", () => {
   it("re-renders the UTC-fallback timestamp in the viewer's local timezone", async () => {
     const context = await browser.newContext({ timezoneId: "Asia/Tokyo" });

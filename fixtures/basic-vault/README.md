@@ -78,5 +78,8 @@ REQ-UX-001/002/003 は spec/09-acceptance-and-evaluation.md §2.5 が求める
 `src/e2e/static-server.ts`（依存なしの自作最小静的サーバ）で配信、Playwright
 （devDependency、`chromium.launch()` を vitest から直接呼ぶプログラム的API）で
 実ブラウザを操作し、検索ボックスによる絞り込み・タグ AND フィルタ・backlink
-リンクのクリック遷移を検証する。ブラウザバイナリの取得には
+リンクのクリック遷移を検証する。検索語ハイライト（REQ-UX-019）も同ファイルで検証する。検索結果のリンクに付く
+`#hl=` フラグメント経由でノート詳細ページへ遷移し、本文に `<mark class="search-hit">`
+が付くこと、wikilink の遷移先には引き継がれないこと、細工したフラグメントでマークアップが
+注入されないことを確認する。ブラウザバイナリの取得には
 `npx playwright install chromium` が必要（初回のみ）。

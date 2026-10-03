@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterEntries } from "./filter.mjs";
+import { filterEntries, splitQueryTerms } from "./filter.mjs";
 
 const entries = [
   {
@@ -102,5 +102,16 @@ describe("filterEntries: multi-word queries and tag text (REQ-UX-001)", () => {
     "Note B",
   ])("matches note-a for the multi-term query %j", (query) => {
     expect(filterEntries(realEntries, query, [])).toContain("note-a");
+  });
+});
+
+describe("splitQueryTerms (REQ-UX-001, REQ-UX-019)", () => {
+  it("lowercases and splits on any whitespace, dropping empty terms", () => {
+    expect(splitQueryTerms("  Note\tLINKS \n ")).toEqual(["note", "links"]);
+  });
+
+  it("returns no terms for an empty or whitespace-only query", () => {
+    expect(splitQueryTerms("")).toEqual([]);
+    expect(splitQueryTerms("   ")).toEqual([]);
   });
 });

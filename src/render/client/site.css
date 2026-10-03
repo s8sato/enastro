@@ -296,6 +296,14 @@ article :first-child {
   margin-top: 0;
 }
 
+/* Search terms carried over from the index page's search (REQ-UX-019),
+   tinted from the theme's own accent so it reads in every theme. */
+mark.search-hit {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: inherit;
+  border-radius: 2px;
+}
+
 /* Inline code and fenced code blocks: give them a visible background/border
    so they read as distinct "code" rather than blending into the body text. */
 article code {

@@ -21,6 +21,7 @@ const CLIENT_ASSETS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url))
 const CLIENT_ASSET_FILENAMES = [
   "filter.mjs",
   "search.mjs",
+  "highlight.mjs",
   "copy-id.mjs",
   "format-local-time.mjs",
   "local-time.mjs",

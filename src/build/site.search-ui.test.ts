@@ -24,6 +24,7 @@ describe("buildSite: client-side search & tag filter UI (REQ-UX-001, REQ-UX-002)
     for (const filename of [
       "filter.mjs",
       "search.mjs",
+      "highlight.mjs",
       "copy-id.mjs",
       "format-local-time.mjs",
       "local-time.mjs",
@@ -52,6 +53,21 @@ describe("buildSite: client-side search & tag filter UI (REQ-UX-001, REQ-UX-002)
     expect(indexHtml).toContain('id="theme-trigger"');
     expect(indexHtml).toContain('<script type="module" src="assets/theme-switcher.mjs"></script>');
     expect(indexHtml).toContain('localStorage.getItem("enastro:theme:v1")');
+  });
+});
+
+describe("buildSite: search-term highlighting on note pages (REQ-UX-019)", () => {
+  it("loads highlight.mjs on every note page without baking any highlight into the HTML", () => {
+    outDir = mkdtempSync(path.join(tmpdir(), "enastro-search-ui-"));
+    buildSite(vaultDir, outDir);
+
+    for (const id of ["note-a", "note-b", "note-c-alias", "note-d-broken-link"]) {
+      const noteHtml = readFileSync(path.join(outDir, "notes", id, "index.html"), "utf-8");
+      expect(noteHtml).toContain('<script type="module" src="../../assets/highlight.mjs"></script>');
+      expect(noteHtml).not.toContain("<mark");
+    }
+    // Result links stay plain; search.mjs adds the `#hl=` fragment at runtime.
+    expect(readFileSync(path.join(outDir, "index.html"), "utf-8")).not.toContain("#hl=");
   });
 });
 

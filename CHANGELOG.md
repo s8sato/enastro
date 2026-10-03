@@ -3,6 +3,15 @@
 本プロジェクトのバージョンは [Semantic Versioning](https://semver.org/lang/ja/) に準拠する。
 フォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) を参考にする。
 
+## [Unreleased]
+
+### 追加
+
+- **検索語ハイライト**: All notes ページの検索結果からノート詳細ページへ遷移すると、
+  検索語を本文中でハイライトし、最初の一致へスクロールする。検索語は URL フラグメント
+  （`#hl=`）でのみ受け渡し、サーバーへは送信されない。コードブロックと数式は対象外
+  （REQ-UX-019、[ADR-0019](decisions/ADR-0019-search-term-highlight-on-note-navigation.md)）。
+
 ## [0.3.4] - 2026-08-31
 
 ### 追加

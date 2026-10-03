@@ -9,6 +9,7 @@
  * file:// protocol due to browser CORS restrictions.
  */
 import { filterEntries } from "./filter.mjs";
+import { buildHighlightHash } from "./highlight.mjs";
 
 async function main() {
   const searchBox = document.getElementById("search-box");
@@ -43,10 +44,18 @@ async function main() {
 
   function update() {
     const visibleIds = new Set(filterEntries(entries, searchBox.value, selectedTags()));
+    // Carry the query over to the note page so it can highlight the matched
+    // terms (REQ-UX-019, ADR-0019). Kept in the fragment, never the query
+    // string, so it is not sent to the server.
+    const highlightHash = buildHighlightHash(searchBox.value);
     let anyVisible = false;
     for (const item of noteList.querySelectorAll("li[data-id]")) {
       const visible = visibleIds.has(item.dataset.id);
       item.hidden = !visible;
+      const link = item.querySelector("a");
+      if (link) {
+        link.setAttribute("href", link.getAttribute("href").split("#")[0] + highlightHash);
+      }
       if (visible) {
         anyVisible = true;
       }

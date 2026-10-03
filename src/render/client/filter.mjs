@@ -9,6 +9,18 @@
  */
 
 /**
+ * Splits a search query into lowercased, whitespace-separated terms. Shared
+ * with the note-page highlighter (REQ-UX-019) so that the terms highlighted
+ * after navigation are exactly the terms the search matched on.
+ *
+ * @param {string} query
+ * @returns {string[]}
+ */
+export function splitQueryTerms(query) {
+  return query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+/**
  * @param {{id: string, title: string, tags: string[], text: string, modifiedAt: string}[]} entries
  * @param {string} query
  * @param {string[]} selectedTags
@@ -22,7 +34,7 @@ export function filterEntries(entries, query, selectedTags) {
   // one contiguous substring. This lets queries like "note-a example" or
   // "This links" match a note whose id/title/tags/text collectively (but
   // not contiguously) contain those terms.
-  const queryTerms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const queryTerms = splitQueryTerms(query);
 
   return entries
     .filter((entry) => {

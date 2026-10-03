@@ -5,6 +5,8 @@ export interface SearchIndexEntryLike {
   text: string;
 }
 
+export function splitQueryTerms(query: string): string[];
+
 export function filterEntries(
   entries: SearchIndexEntryLike[],
   query: string,

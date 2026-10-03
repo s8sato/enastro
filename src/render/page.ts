@@ -216,6 +216,7 @@ ${tagsHtml}
 ${backlinksHtml}
 <script type="module" src="../../assets/copy-id.mjs"></script>
 <script type="module" src="../../assets/local-time.mjs"></script>
+<script type="module" src="../../assets/highlight.mjs"></script>
 </body>
 </html>
 `;
